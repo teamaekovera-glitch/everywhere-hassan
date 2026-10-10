@@ -10,6 +10,7 @@ import {
   clampBudgetINR,
 } from '../engine/defaults'
 import { DEMO_DATA } from '../data'
+import { DEFAULT_NOW_MS } from '../sim/clock'
 
 /**
  * Planner request state (planner spec). v1 keeps this as app state in the
@@ -37,6 +38,17 @@ export const INTERESTS: readonly { id: InterestId; label: string }[] = [
   { id: 'nature', label: 'Nature' },
   { id: 'movies', label: 'Movies' },
 ]
+
+/**
+ * The planner's clock: day trips plan from the dataset's own canonical clock
+ * — 12:00 IST (`DEFAULT_NOW_MS`, sim/clock) — deterministic, no wall time,
+ * the same honesty the Explore clock keeps. NOT midnight: the synthetic
+ * timetable is engineered around the 12:00 demo clock (its header says so) —
+ * Kozhikode's outbound legs run 12:35–15:30 IST with evening returns, so an
+ * earlier start sinks a 12 h deadline into mid-afternoon and starves every
+ * return leg.
+ */
+export const PLANNER_CLOCK_MS = DEFAULT_NOW_MS
 
 /** What the user asked for. `interests` is selection-ordered — the first
  * chip toggled ranks highest for activity packing (planner spec). */

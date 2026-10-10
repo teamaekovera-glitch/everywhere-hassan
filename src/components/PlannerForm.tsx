@@ -14,6 +14,8 @@ interface PlannerFormProps {
   dispatchPlanner: (action: PlannerAction) => void
   onHome: () => void
   onExplore: () => void
+  /** Fired after "Find my trips" stores the request — the shell swaps to the results view. */
+  onSubmitted: () => void
 }
 
 /**
@@ -21,12 +23,10 @@ interface PlannerFormProps {
  * the seven interest chips. Chips are toggled in selection order — the
  * number badge shows the priority the engine will use when packing
  * activities (first chosen wins). "Find my trips" stores the request; the
- * results view is the next PR and reads the same `submitted` state, so the
- * empty state is honest about what exists today.
+ * shell then shows the ranked results view built from it.
  */
-export function PlannerForm({ planner, dispatchPlanner, onHome, onExplore }: PlannerFormProps) {
-  const { draft, submitted } = planner
-  const origin = LOCATIONS.find((loc) => loc.id === draft.originId)
+export function PlannerForm({ planner, dispatchPlanner, onHome, onExplore, onSubmitted }: PlannerFormProps) {
+  const { draft } = planner
 
   return (
     <div className="light-page planner">
@@ -50,6 +50,7 @@ export function PlannerForm({ planner, dispatchPlanner, onHome, onExplore }: Pla
         onSubmit={(e) => {
           e.preventDefault()
           dispatchPlanner({ type: 'submit' })
+          onSubmitted()
         }}
       >
         <div className="planner-card">
@@ -143,32 +144,10 @@ export function PlannerForm({ planner, dispatchPlanner, onHome, onExplore }: Pla
         </button>
       </form>
 
-      {submitted === null ? (
-        <p className="planner-hint">
-          Nothing stored yet — set the form above and press “Find my trips”.
-        </p>
-      ) : (
-        <section className="planner-empty" aria-live="polite">
-          <h2>Your trip request is stored</h2>
-          <p className="planner-empty-echo">
-            {origin?.name ?? submitted.originId} · {formatINR(submitted.budgetINR)} ·{' '}
-            {submitted.availableHours} h
-            {submitted.interests.length > 0 && (
-              <>
-                {' '}
-                · priority:{' '}
-                {submitted.interests
-                  .map((interest, index) => `${index + 1}. ${INTERESTS.find((i) => i.id === interest)?.label ?? interest}`)
-                  .join(', ')}
-              </>
-            )}
-          </p>
-          <p className="planner-empty-note">
-            Ranked trips appear here once the planner engine lands — next PR. Your request is kept
-            in this session; tweak the form and press “Find my trips” again.
-          </p>
-        </section>
-      )}
+      <p className="planner-hint">
+        Set the form above and press “Find my trips” — ranked round trips with every leg, minute,
+        and rupee accounted for.
+      </p>
     </div>
   )
 }

@@ -2,6 +2,7 @@ import { useEffect, useReducer, useState } from 'react'
 import App from './App'
 import { Home } from './components/Home'
 import { PlannerForm } from './components/PlannerForm'
+import { PlannerResults } from './components/PlannerResults'
 import { decodeScenarioHash } from './state/share'
 import { surfaceForHash } from './state/surface'
 import type { Surface } from './state/surface'
@@ -20,6 +21,9 @@ export default function AppShell() {
   const sim = useSimulation()
   const [surface, setSurface] = useState<Surface>(() => surfaceForHash(window.location.hash))
   const [planner, dispatchPlanner] = useReducer(plannerReducer, undefined, initialPlannerState)
+  // Form ⇄ results within the planner surface: the request itself lives in
+  // planner.submitted (the reducer owns it); this flag only picks the view.
+  const [plannerView, setPlannerView] = useState<'form' | 'results'>('form')
 
   // A shared link boots its exact scenario, restored into Explore from ANY
   // surface (spec) — Home is the default landing, never a dead end for a
@@ -60,6 +64,18 @@ export default function AppShell() {
     )
   }
 
+  if (surface === 'planner' && plannerView === 'results' && planner.submitted) {
+    return (
+      <PlannerResults
+        sim={sim}
+        request={planner.submitted}
+        onEditRequest={() => setPlannerView('form')}
+        onHome={() => setSurface('home')}
+        onExplore={() => setSurface('explore')}
+      />
+    )
+  }
+
   if (surface === 'planner') {
     return (
       <PlannerForm
@@ -67,6 +83,7 @@ export default function AppShell() {
         dispatchPlanner={dispatchPlanner}
         onHome={() => setSurface('home')}
         onExplore={() => setSurface('explore')}
+        onSubmitted={() => setPlannerView('results')}
       />
     )
   }

@@ -2225,3 +2225,757 @@ body.light-ui {
     bottom: 12px;
   }
 }
+
+/* ============================================================
+   PLANNER RESULTS + TRIP DETAIL + MAP + MODAL — light surfaces
+   (day-trip spec, results PR). Same light tokens as the form;
+   the dark theme above is untouched.
+   ============================================================ */
+
+.planner-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 26px;
+}
+
+.planner-head-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.planner-title {
+  margin: 0;
+  font-size: clamp(26px, 3.4vw, 40px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--l-text);
+}
+
+.results-echo {
+  margin: 10px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.6;
+  color: var(--l-blue);
+}
+
+/* Cards left, field right — the field gets the larger share (spec). */
+
+.results-main {
+  display: grid;
+  grid-template-columns: minmax(360px, 460px) minmax(0, 1fr);
+  gap: 22px;
+  margin-top: 26px;
+  align-items: start;
+}
+
+.results-cards {
+  min-width: 0;
+}
+
+/* Light overrides for the shared trip-length tabs (dark rules above
+   target the Explore rail; these scope the same names to the results). */
+
+.results-cards .dest-tabs {
+  background: var(--l-panel-soft);
+  border: 1px solid var(--l-line);
+}
+
+.results-cards .dest-tab {
+  color: var(--l-muted);
+  font-family: inherit;
+}
+
+.results-cards .dest-tab:hover {
+  color: var(--l-text);
+}
+
+.results-cards .dest-tab.active {
+  color: var(--l-text);
+  background: var(--l-blue-soft);
+  box-shadow: inset 0 0 0 1px var(--l-line-strong);
+}
+
+.plan-card-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.plan-card {
+  display: flex;
+  gap: 14px;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  border: 1px solid var(--l-line);
+  border-radius: var(--radius);
+  background: var(--l-panel);
+  box-shadow: 0 6px 18px rgba(23, 32, 58, 0.06);
+  padding: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.plan-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px rgba(23, 32, 58, 0.1);
+}
+
+.plan-card.selected {
+  border-color: var(--l-blue);
+  box-shadow: 0 0 0 2px var(--l-blue-soft), 0 12px 26px rgba(52, 89, 214, 0.14);
+}
+
+.plan-card-photo img,
+.plan-card-monogram {
+  display: block;
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}
+
+.plan-card-monogram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 750;
+  color: var(--l-blue);
+  background: var(--l-blue-soft);
+}
+
+.plan-card-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.plan-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.plan-card-head h3 {
+  margin: 0;
+  font-size: 16.5px;
+  font-weight: 750;
+  color: var(--l-text);
+}
+
+.plan-rank {
+  color: var(--l-violet);
+  font-weight: 800;
+}
+
+.plan-score-hint {
+  flex: none;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--l-faint);
+}
+
+.plan-route {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--l-muted);
+}
+
+.plan-costs {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  gap: 4px 16px;
+  margin: 10px 0 0;
+  align-items: baseline;
+}
+
+.plan-costs dt {
+  grid-column: auto;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--l-faint);
+}
+
+.plan-costs dd {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--l-text);
+  white-space: nowrap;
+}
+
+.estimated-tag {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 1px 6px;
+  border-radius: 7px;
+  background: rgba(255, 191, 60, 0.16);
+  color: #8a6410;
+  font-size: 9.5px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.plan-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.plan-chip {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--l-blue-soft);
+  color: var(--l-blue);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.plan-chip-quiet {
+  background: transparent;
+  border: 1px dashed var(--l-line-strong);
+  color: var(--l-faint);
+}
+
+.results-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.results-field .field-area,
+.results-field canvas {
+  width: 100%;
+}
+
+.field-caption {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--l-faint);
+}
+
+/* ---- trip detail ---- */
+
+.results-detail {
+  margin-top: 22px;
+  scroll-margin-top: 24px;
+}
+
+.trip-detail {
+  border: 1px solid var(--l-line);
+  border-radius: var(--radius);
+  background: var(--l-panel);
+  box-shadow: var(--l-shadow);
+  padding: 20px 22px 22px;
+}
+
+.trip-detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.trip-detail-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 780;
+  color: var(--l-text);
+}
+
+.trip-detail-sub {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--l-muted);
+}
+
+.trip-detail-guarantee {
+  margin: 8px 0 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--l-muted);
+}
+
+.trip-detail-guarantee strong {
+  color: var(--l-text);
+}
+
+.trip-detail-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.itinerary-list {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--l-line);
+}
+
+.itinerary-entry {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: baseline;
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--l-line);
+}
+
+.itinerary-time {
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--l-blue);
+  white-space: nowrap;
+}
+
+.itinerary-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.itinerary-title {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--l-text);
+}
+
+.itinerary-mode {
+  display: inline-block;
+  margin-right: 7px;
+  padding: 1px 7px;
+  border-radius: 7px;
+  background: var(--l-blue-soft);
+  color: var(--l-blue);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.itinerary-phase {
+  color: var(--l-faint);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.itinerary-blurb {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--l-muted);
+}
+
+.itinerary-slot {
+  font-size: 11.5px;
+  color: var(--l-faint);
+}
+
+.itinerary-cost {
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--l-text);
+  white-space: nowrap;
+}
+
+.trip-detail-totals {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  font-size: 13.5px;
+  color: var(--l-muted);
+}
+
+.trip-detail-totals strong {
+  color: var(--l-text);
+}
+
+/* ---- trip map (lazy Leaflet) + schematic fallback ---- */
+
+.trip-map {
+  position: relative;
+  margin-top: 18px;
+  border: 1px solid var(--l-line);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.trip-map-canvas {
+  height: 340px;
+  background: #dfe4ee;
+}
+
+.trip-map-loading,
+.trip-map-empty {
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--l-muted);
+}
+
+.trip-map-note {
+  padding: 8px 12px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--l-muted);
+  background: var(--l-panel-soft);
+  border-top: 1px solid var(--l-line);
+}
+
+.trip-map-note-error {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  color: #8a2f14;
+  background: rgba(255, 191, 60, 0.14);
+}
+
+.trip-map-retry {
+  flex: none;
+  padding: 6px 14px;
+}
+
+/* Leaflet attribution must stay visible on the map (OSM etiquette). */
+.trip-map .leaflet-control-attribution {
+  font-size: 10px;
+  color: var(--l-muted);
+}
+
+.trip-map-pin {
+  position: relative;
+}
+
+.trip-map-pin-head {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(23, 32, 58, 0.4);
+}
+
+.trip-map-pin-origin .trip-map-pin-head {
+  background: var(--l-blue);
+}
+
+.trip-map-pin-destination .trip-map-pin-head {
+  background: var(--l-violet);
+}
+
+.trip-map-pin-activity .trip-map-pin-head {
+  background: #e0932f;
+  width: 11px;
+  height: 11px;
+}
+
+.trip-map-pin-label {
+  position: absolute;
+  left: 20px;
+  top: 0;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--l-text);
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 6px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
+.schematic-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  background:
+    radial-gradient(500px 300px at 80% 0%, rgba(91, 140, 255, 0.08), transparent 60%),
+    #eef1f8;
+}
+
+.schematic-leg-label {
+  font-size: 12px;
+  font-weight: 700;
+  fill: var(--l-text);
+  paint-order: stroke;
+  stroke: rgba(255, 255, 255, 0.85);
+  stroke-width: 3px;
+}
+
+.schematic-stop-label {
+  font-size: 13px;
+  font-weight: 750;
+  fill: var(--l-text);
+  paint-order: stroke;
+  stroke: rgba(255, 255, 255, 0.85);
+  stroke-width: 3px;
+}
+
+.schematic-scale-label {
+  font-size: 11px;
+  font-weight: 700;
+  fill: var(--l-muted);
+}
+
+/* ---- destination modal (the app's first modal primitive) ---- */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(23, 32, 58, 0.44);
+  backdrop-filter: blur(3px);
+}
+
+.modal-dialog {
+  position: relative;
+  width: min(680px, 100%);
+  max-height: min(86vh, 860px);
+  overflow-y: auto;
+  border-radius: var(--radius);
+  background: var(--l-panel);
+  box-shadow: 0 30px 70px rgba(23, 32, 58, 0.35);
+}
+
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--l-text);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(23, 32, 58, 0.25);
+}
+
+.modal-hero {
+  margin: 0;
+  position: relative;
+}
+
+.modal-hero img {
+  display: block;
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+}
+
+.modal-monogram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 160px;
+  font-size: 64px;
+  font-weight: 800;
+  color: var(--l-blue);
+  background: var(--l-blue-soft);
+}
+
+.modal-hero-credit {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 20px 16px 8px;
+  font-size: 11px;
+  color: #fff;
+  background: linear-gradient(transparent, rgba(23, 32, 58, 0.72));
+}
+
+.modal-body {
+  padding: 18px 20px 20px;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--l-text);
+}
+
+.modal-region {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--l-muted);
+}
+
+.modal-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 16px 0 0;
+  padding: 14px;
+  border: 1px solid var(--l-line);
+  border-radius: var(--radius-sm);
+  background: var(--l-panel-soft);
+}
+
+.modal-facts dt {
+  font-size: 10.5px;
+  font-weight: 750;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--l-faint);
+}
+
+.modal-facts dd {
+  margin: 3px 0 0;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.5;
+  color: var(--l-text);
+}
+
+.modal-section-title {
+  margin: 20px 0 10px;
+  font-size: 15px;
+  font-weight: 750;
+  color: var(--l-text);
+}
+
+.spot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.spot-tile {
+  margin: 0;
+  border: 1px solid var(--l-line);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--l-panel-soft);
+}
+
+.spot-tile img {
+  display: block;
+  width: 100%;
+  height: 96px;
+  object-fit: cover;
+}
+
+.spot-monogram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 96px;
+  font-size: 30px;
+  font-weight: 750;
+  color: var(--l-blue);
+  background: var(--l-blue-soft);
+}
+
+.spot-tile figcaption {
+  padding: 8px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.spot-name {
+  font-size: 12.5px;
+  font-weight: 750;
+  color: var(--l-text);
+}
+
+.spot-credit {
+  font-size: 10px;
+  color: var(--l-faint);
+}
+
+.spot-blurb {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--l-muted);
+}
+
+.spot-distance {
+  font-size: 10.5px;
+  font-weight: 650;
+  color: var(--l-faint);
+}
+
+.modal-disclosure {
+  margin: 18px 0 0;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--l-faint);
+}
+
+/* ---- responsive: results surfaces at narrow widths ---- */
+
+@media (max-width: 900px) {
+  .results-main {
+    grid-template-columns: 1fr;
+  }
+
+  .results-field {
+    order: -1;
+  }
+}
+
+@media (max-width: 768px) {
+  .trip-detail-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .itinerary-entry {
+    grid-template-columns: 108px minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+
+  .plan-costs {
+    grid-template-columns: repeat(2, auto);
+  }
+
+  .modal-backdrop {
+    padding: 10px;
+    align-items: flex-end;
+  }
+
+  .modal-dialog {
+    max-height: 92vh;
+  }
+}
