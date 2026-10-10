@@ -44,12 +44,6 @@ export function FieldCanvas({ results, originId, originName, selectedId, onSelec
   const [hover, setHover] = useState<HoverState | null>(null)
   const reducedMotion = useReducedMotion()
 
-  // Latest props for the renderer's callbacks without re-creating it.
-  const selectRef = useRef(onSelect)
-  selectRef.current = onSelect
-  const originRef = useRef(originId)
-  originRef.current = originId
-
   // Track the wrapper's css size — the canvas fills its container.
   useEffect(() => {
     const wrap = wrapRef.current

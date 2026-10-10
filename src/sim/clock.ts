@@ -36,6 +36,14 @@ export function formatIst(ms: number): string {
   return dayOffset > 0 ? `${hh}:${mm} (+${dayOffset}d)` : `${hh}:${mm}`
 }
 
+/** '12:00 PM' / '6 AM' (+1d suffix) — the timeline cursor and tick labels. */
+export function formatIst12(ms: number): string {
+  const { dayOffset, hours, minutes } = istParts(ms)
+  const h12 = hours % 12 === 0 ? 12 : hours % 12
+  const suffix = dayOffset > 0 ? ' (+1d)' : ''
+  return `${h12}:${String(minutes).padStart(2, '0')} ${hours < 12 ? 'AM' : 'PM'}${suffix}`
+}
+
 export function clampToSimWindow(ms: number): number {
   return Math.min(SIM_WINDOW_END_MS, Math.max(SIM_WINDOW_START_MS, ms))
 }
