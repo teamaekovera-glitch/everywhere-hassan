@@ -229,6 +229,10 @@ export function PlannerResults({ sim, request, onEditRequest, onHome, onExplore 
                   )
                 })}
               </ol>
+              <p className="results-provenance" data-testid="results-provenance">
+                Fares, activities, and meals are synthetic estimates — not live transport data. No
+                accounts, no tracking.
+              </p>
             </section>
 
             <section className="results-field" aria-label="Feasible trips field">

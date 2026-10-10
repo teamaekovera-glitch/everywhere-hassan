@@ -1,5 +1,7 @@
 // Bundled, offline destination thumbnails keyed by location id (spec).
-// Every image is a same-origin Vite asset — no external URL, no fetch, ever.
+// Every image is a same-origin Vite asset — these images never touch the
+// network. (The route map's OpenStreetMap tiles are the app's ONE networked
+// surface; they load only when online and live in TripMap, not here.)
 // A missing entry degrades to the tag-colored monogram tile in the card, so
 // the manifest test failing is the only way a monogram should ever appear.
 import kasaragod from '../assets/destinations/kasaragod.webp'

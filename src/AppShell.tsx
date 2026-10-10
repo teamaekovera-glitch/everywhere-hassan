@@ -28,7 +28,8 @@ export default function AppShell() {
   // A shared link boots its exact scenario, restored into Explore from ANY
   // surface (spec) — Home is the default landing, never a dead end for a
   // link. Anything malformed or stale degrades silently: the decode returns
-  // null and nothing happens. Runs once on mount; offline-safe (no fetch).
+  // null and nothing happens. Runs once on mount; the app itself makes no
+  // fetches — map tiles (TripMap) are the one networked surface.
   // (Moved up from App when the shell was introduced — the surface switch
   // must accompany the restore, and only the shell owns the surface.)
   useEffect(() => {

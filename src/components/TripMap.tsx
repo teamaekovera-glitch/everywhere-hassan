@@ -3,10 +3,9 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { DEMO_DATA } from '../data'
 import { formatIst } from '../sim/clock'
-import { formatINR } from '../engine/format'
 import { formatDuration } from '../viz/format'
 import type { TripPlan } from '../engine/planner'
-import { poiPin, schematicLegs, schematicProjection, scaleBarKmFor } from './tripPlan'
+import { poiPin, schematicLabelLayout, SCHEMATIC_STOP_GAP_PX, schematicLegLabelText, schematicLegs, schematicProjection, scaleBarKmFor } from './tripPlan'
 import type { SchematicLeg } from './tripPlan'
 import { nextFailureCount, shouldShowSchematic } from './tripMapFallback'
 
@@ -162,7 +161,7 @@ export default function TripMap({ plan, deadlineMs }: TripMapProps) {
       <div ref={containerRef} className="trip-map-canvas" key={mapKey} />
       <div className="trip-map-note">
         Route from EVERYWHERE's timetable · back by {formatIst(plan.arriveBackAt)} — before your{' '}
-        {formatIst(deadlineMs)} deadline · map data © OpenStreetMap contributors
+        {formatIst(deadlineMs)} deadline · map data © OpenStreetMap contributors — loads when online
       </div>
     </div>
   )
@@ -181,6 +180,10 @@ function SchematicRoute({
   const width = 640
   const height = 360
   const project = schematicProjection(legs, width, height)
+  // Label layout is pure and shared with the tests: the destination stop
+  // anchors at the trip's far end (the last outbound leg's end), and leg
+  // labels resolve their own collisions — no index-parity guesses.
+  const layout = schematicLabelLayout(legs, project, originName, destinationName)
   const routeKm = legs.reduce((sum, leg) => sum + leg.distanceKm, 0)
   const scaleBarKm = scaleBarKmFor(routeKm)
   const scaleBarPx = (scaleBarKm / Math.max(1, routeKm)) * (width / 4)
@@ -190,11 +193,6 @@ function SchematicRoute({
     const b = project(leg.to)
     return { leg, a, b }
   })
-  // Round-trip geometry: the return leg ends back at the origin, so the
-  // destination anchor is the outbound's far end — never `last.b`.
-  const first = drawn[0]
-  const last = drawn[drawn.length - 1]
-  const destinationPoint = first.b
 
   return (
     <svg
@@ -204,42 +202,45 @@ function SchematicRoute({
       aria-label={`Schematic route from ${originName} to ${destinationName}, approximately ${Math.round(routeKm)} km each way`}
       data-testid="schematic-svg"
     >
-      {drawn.map(({ leg, a, b }, index) => (
-        <g key={leg.id}>
-          <line
-            x1={a.x}
-            y1={a.y}
-            x2={b.x}
-            y2={b.y}
-            stroke={leg.phase === 'outbound' ? '#3459d6' : '#6f5ff0'}
-            strokeWidth={3}
-            strokeDasharray={leg.phase === 'return' ? '7 7' : undefined}
-            strokeLinecap="round"
-          />
-          {/* A round trip traces the same segment both ways, so both leg
-              midpoints coincide — opposite offsets keep the labels apart. */}
+      {drawn.map(({ leg, a, b }) => (
+        <line
+          key={leg.id}
+          x1={a.x}
+          y1={a.y}
+          x2={b.x}
+          y2={b.y}
+          stroke={leg.phase === 'outbound' ? '#3459d6' : '#6f5ff0'}
+          strokeWidth={3}
+          strokeDasharray={leg.phase === 'return' ? '7 7' : undefined}
+          strokeLinecap="round"
+        />
+      ))}
+      {layout &&
+        layout.legLabels.map((placement, index) => (
           <text
+            key={legs[index].id}
             className="schematic-leg-label"
-            x={(a.x + b.x) / 2}
-            y={(a.y + b.y) / 2 + (index % 2 === 0 ? -20 : 26)}
+            x={placement.x}
+            y={placement.y}
             textAnchor="middle"
           >
-            {leg.label} · {formatDuration((leg.arriveMs - leg.departMs) / 60_000)} · {formatINR(leg.costINR)}
+            {schematicLegLabelText(legs[index])}
           </text>
-        </g>
-      ))}
-      {first && (
+        ))}
+      {layout && (
         <g>
-          <circle cx={first.a.x} cy={first.a.y} r={7} fill="#3459d6" />
-          <text className="schematic-stop-label" x={first.a.x} y={first.a.y - 14} textAnchor="middle">
+          <circle cx={layout.origin.x} cy={layout.origin.y + SCHEMATIC_STOP_GAP_PX} r={7} fill="#3459d6" />
+          <text className="schematic-stop-label" x={layout.origin.x} y={layout.origin.y} textAnchor="middle">
             {originName}
           </text>
-        </g>
-      )}
-      {last && (
-        <g>
-          <circle cx={destinationPoint.x} cy={destinationPoint.y} r={7} fill="#6f5ff0" />
-          <text className="schematic-stop-label" x={destinationPoint.x} y={destinationPoint.y - 14} textAnchor="middle">
+          <circle
+            cx={layout.destination.x}
+            cy={layout.destination.y + SCHEMATIC_STOP_GAP_PX}
+            r={7}
+            fill="#6f5ff0"
+            data-testid="schematic-destination-dot"
+          />
+          <text className="schematic-stop-label" x={layout.destination.x} y={layout.destination.y} textAnchor="middle">
             {destinationName}
           </text>
         </g>
