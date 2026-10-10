@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { DEMO_DATA } from './data'
 import { FieldCanvas } from './components/FieldCanvas'
 import { Header } from './components/Header'
@@ -12,30 +12,27 @@ import { AlertCard } from './components/AlertCard'
 import { Timeline } from './components/Timeline'
 import { StoryOverlay } from './components/StoryOverlay'
 import { TimelapseOverlay } from './components/TimelapseOverlay'
-import { useSimulation } from './state/store'
 import { buildDepartureAlerts } from './state/alerts'
-import { buildShareUrl, copyText, decodeScenarioHash, sharedScenarioFromState } from './state/share'
+import { buildShareUrl, copyText, sharedScenarioFromState } from './state/share'
 import { SIM_WINDOW_END_MS, SIM_WINDOW_START_MS } from './sim/clock'
+import type { Simulation } from './state/store'
+
+interface AppProps {
+  /** The one store snapshot, owned by AppShell (the shell needs dispatch
+   * for share deep-links; two useSimulation() calls would mean two stores). */
+  sim: Simulation
+}
 
 /**
  * One snapshot per change (spec): the store runs the recompute pipeline and
  * every surface below renders the same engine output. Nothing downstream
  * computes its own truth.
  */
-export default function App() {
-  const { clock, constraints, results, summary, selectedId, scenarios, probePreview, story, timelapse, dispatch } =
-    useSimulation()
+export default function App({ sim }: AppProps) {
+  const { clock, constraints, results, summary, selectedId, scenarios, probePreview, story, timelapse, dispatch } = sim
 
   const origin = DEMO_DATA.locationById.get(constraints.originId)
   const originName = origin?.name ?? constraints.originId
-
-  // A shared link boots its exact scenario (spec). Anything malformed or
-  // stale degrades silently — the decode returns null and nothing happens.
-  // Runs once on mount; offline-safe (no fetch, ever).
-  useEffect(() => {
-    const shared = decodeScenarioHash(window.location.hash)
-    if (shared) dispatch({ type: 'loadShared', scenario: shared })
-  }, [dispatch])
 
   // Copy link (spec): serialize the current snapshot with the SAME schema
   // localStorage uses and put the URL on the clipboard.
