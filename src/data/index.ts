@@ -18,6 +18,8 @@ export {
   REFERENCE_DAY_START_MS,
 } from './referenceDay'
 export type { Connection, Location, Mode, TransportData, ActivityDef, MealDef, SpotDef, PoiCatalogInput } from './validate'
+export { INTEREST_IDS, MEAL_SLOTS } from './types'
+export type { InterestId, MealSlot } from './types'
 export { LOCATIONS } from './locations'
 export { CONNECTIONS } from './timetable'
 export { ACTIVITIES } from './activities'
