@@ -7,6 +7,7 @@ import {
   SIM_WINDOW_START_MS,
   clampToSimWindow,
   formatIst,
+  formatIst12,
   istParts,
   makeSimClockState,
   stepClock,
@@ -58,5 +59,14 @@ describe('sim clock (deterministic, no wall time)', () => {
       speedMultiplier: 1,
     })
     expect(formatIst(DEFAULT_NOW_MS)).toBe('12:00')
+  })
+
+  it('formats 12-hour clock times for the timeline cursor and ticks', () => {
+    expect(formatIst12(at(0, 5))).toBe('12:05 AM')
+    expect(formatIst12(at(6, 0))).toBe('6:00 AM')
+    expect(formatIst12(DEFAULT_NOW_MS)).toBe('12:00 PM')
+    expect(formatIst12(at(12, 0))).toBe('12:00 PM')
+    expect(formatIst12(at(18, 5))).toBe('6:05 PM')
+    expect(formatIst12(at(24, 30))).toBe('12:30 AM (+1d)')
   })
 })
