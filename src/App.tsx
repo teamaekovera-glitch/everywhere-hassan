@@ -20,7 +20,7 @@ import { SIM_WINDOW_END_MS, SIM_WINDOW_START_MS } from './sim/clock'
  * computes its own truth.
  */
 export default function App() {
-  const { clock, constraints, results, summary, selectedId, scenarios, dispatch } = useSimulation()
+  const { clock, constraints, results, summary, selectedId, scenarios, probePreview, dispatch } = useSimulation()
 
   const origin = DEMO_DATA.locationById.get(constraints.originId)
 
@@ -80,7 +80,14 @@ export default function App() {
             remainingMin={remainingMin}
             criticalCount={criticalConnIds.size}
           />
-          <DetailsPanel result={selected} />
+          <DetailsPanel
+            result={selected}
+            constraints={constraints}
+            probeFingerprint={`${constraints.originId}|${constraints.now}|${constraints.budgetINR}|${constraints.availableHours}`}
+            preview={probePreview}
+            onApplyPreview={(p) => dispatch({ type: 'applyProbePreview', preview: p })}
+            onResetPreview={() => dispatch({ type: 'clearProbePreview' })}
+          />
         </aside>
         <main className="field-area" aria-label="Possibility field">
           <FieldCanvas
