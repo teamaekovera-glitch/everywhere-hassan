@@ -12,7 +12,43 @@ export interface Location {
   region: string
   /** e.g. ['Beaches', 'Food'] — rail captions. */
   tags: string[]
+  /**
+   * Real-world latitude in decimal degrees (WGS84). Unlike the synthetic
+   * timetable, these are factual geography — the map and planner consume
+   * them; the bounding-box validator refuses typos at load.
+   */
+  lat: number
+  /** Real-world longitude in decimal degrees (WGS84). */
+  lon: number
 }
+
+/**
+ * The seven planner interest categories, in canonical display order.
+ * The planner ranks by these; the POI catalog is tagged with them.
+ */
+export type InterestId =
+  | 'food'
+  | 'heritage'
+  | 'nightlife'
+  | 'adventure'
+  | 'shopping'
+  | 'nature'
+  | 'movies'
+
+export const INTEREST_IDS: readonly InterestId[] = [
+  'food',
+  'heritage',
+  'nightlife',
+  'adventure',
+  'shopping',
+  'nature',
+  'movies',
+]
+
+/** Which meal slot a service window belongs to. */
+export type MealSlot = 'breakfast' | 'lunch' | 'evening'
+
+export const MEAL_SLOTS: readonly MealSlot[] = ['breakfast', 'lunch', 'evening']
 
 /**
  * One scheduled run of one service on the reference day. Immutable.

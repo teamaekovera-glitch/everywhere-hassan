@@ -23,11 +23,15 @@ function fixtureData(
     ids.add(c.from)
     ids.add(c.to)
   }
-  const locations: Location[] = [...ids].sort().map((id) => ({
+  const locations: Location[] = [...ids].sort().map((id, index) => ({
     id,
     name: names[id] ?? id.toUpperCase(),
     region: 'Kerala',
     tags: [],
+    // Fixtures stay geography-neutral, but loadTransportData validates that
+    // every location carries in-bounds coordinates — derive them from the id.
+    lat: 10 + (index % 10) * 0.5,
+    lon: 76 + (index % 8) * 0.5,
   }))
   return loadTransportData(locations, connections)
 }
