@@ -176,3 +176,13 @@ export const HUE_CSS_VAR: Record<CategoryHue, string> = {
   cyan: 'var(--hue-cyan)',
   blue: 'var(--hue-blue)',
 }
+
+/** Canvas RGB per hue — the renderer paints these (additive blending). */
+export const HUE_RGB: Record<CategoryHue, readonly [number, number, number]> = {
+  azure: [77, 166, 255],
+  teal: [47, 212, 165],
+  violet: [155, 123, 255],
+  amber: [240, 162, 74],
+  cyan: [56, 200, 240],
+  blue: [91, 140, 255],
+}
