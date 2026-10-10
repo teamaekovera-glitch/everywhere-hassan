@@ -14,8 +14,8 @@ import {
 import type { Connection, Location, Mode } from '../src/data'
 
 const baseLocations: Location[] = [
-  { id: 'a', name: 'A', region: 'Kerala', tags: [] },
-  { id: 'b', name: 'B', region: 'Kerala', tags: [] },
+  { id: 'a', name: 'A', region: 'Kerala', tags: [], lat: 10.0, lon: 76.0 },
+  { id: 'b', name: 'B', region: 'Kerala', tags: [], lat: 10.5, lon: 76.5 },
 ]
 
 function conn(overrides: Partial<Connection> = {}): Connection {

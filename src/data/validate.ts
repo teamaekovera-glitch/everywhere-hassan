@@ -13,6 +13,16 @@ export class DatasetValidationError extends Error {
 }
 
 /**
+ * Rough South-India bounding box for the demo dataset. Location lat/lon are
+ * real geography, so a coordinate typo (a decimal dropped, a sea position)
+ * must fail loudly at load rather than render a map pin in the ocean.
+ */
+const LAT_MIN = 8
+const LAT_MAX = 22
+const LON_MIN = 72
+const LON_MAX = 80
+
+/**
  * Refuses internally inconsistent timetables: depart ≥ arrive, negative
  * costs, duplicate location/connection ids, unknown nodes, bad modes.
  * Throws DatasetValidationError listing all problems at once.
@@ -33,6 +43,16 @@ export function validateDataset(
     locationIds.add(loc.id)
     if (typeof loc.name !== 'string' || loc.name.length === 0) {
       problems.push(`location '${loc.id}' has an empty name`)
+    }
+    if (!Number.isFinite(loc.lat) || loc.lat < LAT_MIN || loc.lat > LAT_MAX) {
+      problems.push(
+        `location '${loc.id}' has latitude ${loc.lat} outside the dataset bounding box (${LAT_MIN}–${LAT_MAX}°N)`,
+      )
+    }
+    if (!Number.isFinite(loc.lon) || loc.lon < LON_MIN || loc.lon > LON_MAX) {
+      problems.push(
+        `location '${loc.id}' has longitude ${loc.lon} outside the dataset bounding box (${LON_MIN}–${LON_MAX}°E)`,
+      )
     }
   }
 

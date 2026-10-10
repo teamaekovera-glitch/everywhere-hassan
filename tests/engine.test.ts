@@ -18,7 +18,7 @@ function fixtureData(connections: Connection[]): TransportData {
   }
   const locations: Location[] = [...ids]
     .sort()
-    .map((id) => ({ id, name: id.toUpperCase(), region: 'Kerala', tags: [] }))
+    .map((id) => ({ id, name: id.toUpperCase(), region: 'Kerala', tags: [], lat: 10.0, lon: 76.0 }))
   return loadTransportData(locations, connections)
 }
 
