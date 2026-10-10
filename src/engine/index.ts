@@ -34,6 +34,8 @@ export {
   makeDefaultConstraints,
 } from './defaults'
 export { labelToJourney, journeysFromLabels, pickBest } from './journey'
+export { probeUnlock, describeUnlock } from './probe'
+export type { UnlockProbe, BlockingConnection, TimeRelaxation } from './probe'
 
 /**
  * The one engine entry point: given the dataset, the constraints (including
