@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { DEMO_DATA } from './data'
 import { deadlineOf } from './engine'
 import { FieldCanvas } from './components/FieldCanvas'
@@ -14,6 +14,7 @@ import { StoryOverlay } from './components/StoryOverlay'
 import { TimelapseOverlay } from './components/TimelapseOverlay'
 import { useSimulation } from './state/store'
 import { buildDepartureAlerts } from './state/alerts'
+import { buildShareUrl, copyText, decodeScenarioHash, sharedScenarioFromState } from './state/share'
 import { SIM_WINDOW_END_MS, SIM_WINDOW_START_MS } from './sim/clock'
 
 /**
@@ -26,6 +27,29 @@ export default function App() {
     useSimulation()
 
   const origin = DEMO_DATA.locationById.get(constraints.originId)
+
+  // A shared link boots its exact scenario (spec). Anything malformed or
+  // stale degrades silently — the decode returns null and nothing happens.
+  // Runs once on mount; offline-safe (no fetch, ever).
+  useEffect(() => {
+    const shared = decodeScenarioHash(window.location.hash)
+    if (shared) dispatch({ type: 'loadShared', scenario: shared })
+  }, [dispatch])
+
+  // Copy link (spec): serialize the current snapshot with the SAME schema
+  // localStorage uses and put the URL on the clipboard.
+  const onShareLink = useCallback(async (): Promise<boolean> => {
+    const scenario = sharedScenarioFromState({
+      clockNowMs: clock.nowMs,
+      speedMultiplier: clock.speedMultiplier,
+      originId: constraints.originId,
+      budgetINR: constraints.budgetINR,
+      availableHours: constraints.availableHours,
+      selectedId,
+    })
+    if (!scenario) return false
+    return copyText(buildShareUrl(window.location.href, scenario))
+  }, [clock.nowMs, clock.speedMultiplier, constraints.originId, constraints.budgetINR, constraints.availableHours, selectedId])
 
   const criticalConnIds = useMemo(() => {
     const ids = new Set<string>()
@@ -75,6 +99,7 @@ export default function App() {
             onSave={(name) => dispatch({ type: 'saveScenario', name })}
             onLoad={(name) => dispatch({ type: 'loadScenario', name })}
             onDelete={(name) => dispatch({ type: 'deleteScenario', name })}
+            onShareLink={onShareLink}
           />
           <AlertsPanel alerts={alerts} />
           <StatsPanel
