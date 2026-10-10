@@ -42,6 +42,8 @@ export interface BlockingConnection {
 
 export interface UnlockProbe {
   destinationId: string
+  /** Display name resolved from the dataset — the narration uses it verbatim. */
+  destinationName: string
   reachableNow: false
   /** Smallest budget bump (₹) that yields a nondominated option. Null when no budget inside the app's range unlocks it. */
   minExtraBudget: number | null
@@ -109,6 +111,7 @@ export function probeUnlock(
     throw new Error(`unknown destination '${destId}'`)
   }
   if (destId === constraints.originId) return null
+  const destination = data.locationById.get(destId)!
 
   const input = toSearchInput(constraints)
   if (hasOption(data, input, destId)) return null
@@ -160,6 +163,7 @@ export function probeUnlock(
     // Stranded even under every bounded relaxation — the panel says so.
     return {
       destinationId: destId,
+      destinationName: destination.name,
       reachableNow: false,
       minExtraBudget: null,
       minExtraTime: null,
@@ -178,6 +182,7 @@ export function probeUnlock(
 
   return {
     destinationId: destId,
+    destinationName: destination.name,
     reachableNow: false,
     minExtraBudget,
     minExtraTime,
@@ -195,7 +200,7 @@ export function probeUnlock(
 
 /** One-line human summary of a probe's headline unlock — the panel's lead sentence. */
 export function describeUnlock(probe: UnlockProbe): string | null {
-  const name = probe.destinationId
+  const name = probe.destinationName
   if (probe.minExtraBudget !== null) {
     return `${formatINR(probe.minExtraBudget)} more unlocks ${name}.`
   }

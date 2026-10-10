@@ -40,6 +40,8 @@ describe('probe — the 18:30 collapse snapshot (Mangaluru)', () => {
     const probe = probeUnlock(DEMO_DATA, c, 'mangaluru')
     expect(probe).not.toBeNull()
     expect(probe!.reachableNow).toBe(false)
+    // The narration speaks the display name, not the slug.
+    expect(probe!.destinationName).toBe('Mangaluru')
     // No future inbound to Mangaluru exists at 18:30 — money cannot buy back
     // an expired departure, and the budget sweep must refuse to invent one.
     expect(probe!.minExtraBudget).toBeNull()
