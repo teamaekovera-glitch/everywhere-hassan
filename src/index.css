@@ -1098,3 +1098,238 @@ select {
   background: rgba(240, 162, 74, 0.18);
   border-color: var(--amber);
 }
+
+/* ---- story mode + time-lapse (upgrade spec) ---- */
+
+/* The story and time-lapse ride above everything, but never block the
+   page itself — interactions outside their buttons exit the mode. */
+.story-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 18px;
+  pointer-events: none;
+}
+
+.story-card {
+  pointer-events: auto;
+  width: min(560px, 100%);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--panel-solid);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+  padding: 14px 18px 12px;
+}
+
+.story-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  align-items: baseline;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.story-clock {
+  color: var(--amber);
+  font-variant-numeric: tabular-nums;
+}
+
+.story-count strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.story-title {
+  margin: 8px 0 4px;
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+.story-caption {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.story-unlock-state {
+  margin: 0 0 10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--blue-soft);
+  font-size: 12px;
+  color: var(--text);
+}
+
+.story-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.story-btn {
+  padding: 5px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.story-btn:hover {
+  border-color: var(--blue);
+  background: var(--blue-soft);
+}
+
+.story-btn.story-play {
+  border-color: var(--line-strong);
+  min-width: 64px;
+}
+
+.story-btn.story-exit {
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.story-progress {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  justify-content: center;
+}
+
+.story-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ghost-soft);
+  border: 1px solid var(--line);
+}
+
+.story-dot.current {
+  background: var(--amber);
+  border-color: var(--amber);
+}
+
+.story-dot.done {
+  background: var(--blue);
+  border-color: var(--blue);
+}
+
+/* Full-day time-lapse: one prominent timestamp over the field. */
+.timelapse-overlay {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--panel-solid);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.timelapse-time {
+  font-size: 20px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.timelapse-label {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.timelapse-exit {
+  padding: 4px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.timelapse-exit:hover {
+  border-color: var(--amber);
+  background: var(--amber-soft);
+}
+
+/* Header keys for the two guided modes. */
+.btn-story,
+.btn-timelapse {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease, box-shadow 120ms ease;
+}
+
+.btn-story {
+  border: 1px solid var(--amber);
+  background: var(--amber-soft);
+  color: var(--text);
+}
+
+.btn-story:hover {
+  background: rgba(240, 162, 74, 0.26);
+  box-shadow: 0 0 18px rgba(240, 162, 74, 0.25);
+}
+
+.btn-timelapse {
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--text);
+}
+
+.btn-timelapse:hover {
+  border-color: var(--blue);
+  background: var(--blue-soft);
+}
+
+/* Copy link row (share links). */
+.scenario-share-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 10px 0 2px;
+}
+
+.scenario-share-row button {
+  padding: 5px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.scenario-share-row button:hover {
+  border-color: var(--violet);
+  background: var(--violet-soft);
+}
+
+.scenario-share-note {
+  font-size: 11px;
+  color: var(--faint);
+}

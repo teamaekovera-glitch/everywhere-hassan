@@ -10,6 +10,8 @@ import { DetailsPanel } from './components/DetailsPanel'
 import { AlertsPanel } from './components/AlertsPanel'
 import { DestinationsRail } from './components/DestinationsRail'
 import { Timeline } from './components/Timeline'
+import { StoryOverlay } from './components/StoryOverlay'
+import { TimelapseOverlay } from './components/TimelapseOverlay'
 import { useSimulation } from './state/store'
 import { buildDepartureAlerts } from './state/alerts'
 import { SIM_WINDOW_END_MS, SIM_WINDOW_START_MS } from './sim/clock'
@@ -20,7 +22,8 @@ import { SIM_WINDOW_END_MS, SIM_WINDOW_START_MS } from './sim/clock'
  * computes its own truth.
  */
 export default function App() {
-  const { clock, constraints, results, summary, selectedId, scenarios, probePreview, dispatch } = useSimulation()
+  const { clock, constraints, results, summary, selectedId, scenarios, probePreview, story, timelapse, dispatch } =
+    useSimulation()
 
   const origin = DEMO_DATA.locationById.get(constraints.originId)
 
@@ -54,6 +57,8 @@ export default function App() {
         originName={origin?.name ?? constraints.originId}
         playing={clock.playing}
         onReset={() => dispatch({ type: 'reset' })}
+        onStory={() => dispatch({ type: 'storyStart' })}
+        onTimelapse={() => dispatch({ type: 'timelapseStart' })}
       />
       <div className="app-main">
         <aside className="rail rail-left">
@@ -118,6 +123,8 @@ export default function App() {
         onStep={(minutes) => dispatch({ type: 'step', minutes })}
         onSetSpeed={(multiplier) => dispatch({ type: 'setSpeed', multiplier })}
       />
+      {story && <StoryOverlay story={story} nowMs={clock.nowMs} summary={summary} dispatch={dispatch} />}
+      {timelapse && <TimelapseOverlay nowMs={clock.nowMs} dispatch={dispatch} />}
     </div>
   )
 }
