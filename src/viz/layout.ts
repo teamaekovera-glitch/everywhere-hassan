@@ -134,3 +134,45 @@ export function layoutField(results: readonly DestinationResult[], w: number, h:
 
   return { cx, cy, rMax, nodes }
 }
+
+// ---- category hues ---------------------------------------------------------
+
+/**
+ * The nebula's category hues (mockup): the destination's first tag picks a
+ * hue family — azure seas, green-teal hills, violet heritage, amber city
+ * lights, cyan backwaters. Unknown tags fall back to the field's blue.
+ * Pure: same tags, same hue, every time.
+ */
+export type CategoryHue = 'azure' | 'teal' | 'violet' | 'amber' | 'cyan' | 'blue'
+
+const FIRST_TAG_HUES: Record<string, CategoryHue> = {
+  Beaches: 'azure',
+  Coast: 'azure',
+  Hills: 'teal',
+  Nature: 'teal',
+  Tea: 'teal',
+  Coffee: 'teal',
+  Heritage: 'violet',
+  Temples: 'violet',
+  History: 'violet',
+  Culture: 'violet',
+  Palaces: 'violet',
+  City: 'amber',
+  Food: 'amber',
+  Harbour: 'amber',
+  Backwaters: 'cyan',
+}
+
+export function categoryHue(tags: readonly string[]): CategoryHue {
+  return FIRST_TAG_HUES[tags[0] ?? ''] ?? 'blue'
+}
+
+/** CSS custom property per hue — the DOM surfaces (cards, sparks) read these. */
+export const HUE_CSS_VAR: Record<CategoryHue, string> = {
+  azure: 'var(--hue-azure)',
+  teal: 'var(--hue-teal)',
+  violet: 'var(--hue-violet)',
+  amber: 'var(--hue-amber)',
+  cyan: 'var(--hue-cyan)',
+  blue: 'var(--hue-blue)',
+}

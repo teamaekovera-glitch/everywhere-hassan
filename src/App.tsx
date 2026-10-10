@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useMemo } from 'react'
 import { DEMO_DATA } from './data'
-import { deadlineOf } from './engine'
 import { FieldCanvas } from './components/FieldCanvas'
 import { Header } from './components/Header'
-import { ConstraintPanel } from './components/ConstraintPanel'
+import { OriginCard, BudgetCard, TimeCard, LiveModeCard } from './components/ControlsCards'
+import { StatsCard } from './components/StatsCard'
 import { ScenariosPanel } from './components/ScenariosPanel'
-import { StatsPanel } from './components/StatsPanel'
-import { DetailsPanel } from './components/DetailsPanel'
-import { AlertsPanel } from './components/AlertsPanel'
+import { PreviewBanner } from './components/DestinationDetails'
 import { DestinationsRail } from './components/DestinationsRail'
+import { AlertCard } from './components/AlertCard'
 import { Timeline } from './components/Timeline'
 import { StoryOverlay } from './components/StoryOverlay'
 import { TimelapseOverlay } from './components/TimelapseOverlay'
@@ -27,6 +26,7 @@ export default function App() {
     useSimulation()
 
   const origin = DEMO_DATA.locationById.get(constraints.originId)
+  const originName = origin?.name ?? constraints.originId
 
   // A shared link boots its exact scenario (spec). Anything malformed or
   // stale degrades silently — the decode returns null and nothing happens.
@@ -65,35 +65,17 @@ export default function App() {
     [criticalConnIds],
   )
 
-  const selected = useMemo(() => results.find((r) => r.location.id === selectedId) ?? null, [results, selectedId])
-
   const alerts = useMemo(() => buildDepartureAlerts(DEMO_DATA, constraints), [constraints])
 
-  // deadline − clock, in minutes — how much of the window still fits.
-  const remainingMin = Math.max(
-    0,
-    Math.round((deadlineOf(constraints.now, constraints.availableHours) - constraints.now) / 60_000),
-  )
+  const probeFingerprint = `${constraints.originId}|${constraints.now}|${constraints.budgetINR}|${constraints.availableHours}`
 
   return (
     <div className="app-shell">
       <Header
-        originName={origin?.name ?? constraints.originId}
-        playing={clock.playing}
         onReset={() => dispatch({ type: 'reset' })}
         onStory={() => dispatch({ type: 'storyStart' })}
         onTimelapse={() => dispatch({ type: 'timelapseStart' })}
-      />
-      <div className="app-main">
-        <aside className="rail rail-left">
-          <ConstraintPanel
-            originId={constraints.originId}
-            budgetINR={constraints.budgetINR}
-            availableHours={constraints.availableHours}
-            onOrigin={(id) => dispatch({ type: 'setOrigin', id })}
-            onBudget={(inr) => dispatch({ type: 'setBudget', inr })}
-            onAvailableHours={(hours) => dispatch({ type: 'setAvailableHours', hours })}
-          />
+        scenarioPanel={
           <ScenariosPanel
             scenarios={scenarios}
             onSave={(name) => dispatch({ type: 'saveScenario', name })}
@@ -101,29 +83,27 @@ export default function App() {
             onDelete={(name) => dispatch({ type: 'deleteScenario', name })}
             onShareLink={onShareLink}
           />
-          <AlertsPanel alerts={alerts} />
-          <StatsPanel
-            summary={summary}
-            originName={origin?.name ?? constraints.originId}
-            originRegion={origin?.region ?? '—'}
-            budgetINR={constraints.budgetINR}
-            remainingMin={remainingMin}
-            criticalCount={criticalConnIds.size}
+        }
+      />
+      <div className="app-main">
+        <aside className="rail rail-left" aria-label="Trip controls">
+          <OriginCard originId={constraints.originId} onOrigin={(id) => dispatch({ type: 'setOrigin', id })} />
+          <BudgetCard budgetINR={constraints.budgetINR} onBudget={(inr) => dispatch({ type: 'setBudget', inr })} />
+          <TimeCard
+            availableHours={constraints.availableHours}
+            onAvailableHours={(hours) => dispatch({ type: 'setAvailableHours', hours })}
           />
-          <DetailsPanel
-            result={selected}
-            constraints={constraints}
-            probeFingerprint={`${constraints.originId}|${constraints.now}|${constraints.budgetINR}|${constraints.availableHours}`}
-            preview={probePreview}
-            onApplyPreview={(p) => dispatch({ type: 'applyProbePreview', preview: p })}
-            onResetPreview={() => dispatch({ type: 'clearProbePreview' })}
-          />
+          <LiveModeCard playing={clock.playing} onToggle={() => dispatch({ type: 'togglePlay' })} />
+          <StatsCard summary={summary} criticalCount={criticalConnIds.size} />
         </aside>
         <main className="field-area" aria-label="Possibility field">
+          {probePreview && (
+            <PreviewBanner preview={probePreview} onReset={() => dispatch({ type: 'clearProbePreview' })} />
+          )}
           <FieldCanvas
             results={results}
             originId={constraints.originId}
-            originName={origin?.name ?? constraints.originId}
+            originName={originName}
             selectedId={selectedId}
             onSelect={(id) => dispatch({ type: 'select', id })}
           />
@@ -133,8 +113,12 @@ export default function App() {
           <DestinationsRail
             results={results}
             selectedId={selectedId}
+            constraints={constraints}
+            probeFingerprint={probeFingerprint}
+            onApplyPreview={(p) => dispatch({ type: 'applyProbePreview', preview: p })}
             onSelect={(id) => dispatch({ type: 'select', id })}
           />
+          <AlertCard alerts={alerts} />
         </aside>
       </div>
       <Timeline

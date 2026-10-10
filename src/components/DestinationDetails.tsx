@@ -9,30 +9,44 @@ import { formatINR } from '../engine/format'
 import { formatDuration } from '../viz/format'
 import type { ProbePreview } from '../state/store'
 
-interface DetailsPanelProps {
-  result: DestinationResult | null
-  /** The folded constraints the probe runs against (a lens over the live sim). */
-  constraints: Constraints
-  /** Constraint fingerprint — a changed snapshot remounts the probe section. */
-  probeFingerprint: string
-  preview: ProbePreview | null
-  onApplyPreview: (preview: ProbePreview) => void
-  onResetPreview: () => void
-}
+/**
+ * The body that expands inside a selected destination card: the engine's
+ * reason, every nondominated journey with its leg breakdown, the round-trip
+ * badge — or, for ghosts, the unlock probe's "what would it take?" inline.
+ * Revalidated on every scrub — expired journeys stop being listed.
+ */
 
 function journeyDurationMin(j: Journey): number {
   return (j.arriveAt - j.departAt) / 60_000
 }
 
+function LegList({ journey }: { journey: Journey }) {
+  return (
+    <ol className="leg-list">
+      {journey.legs.map((leg) => (
+        <li key={leg.connId} className={`leg mode-${leg.mode}`}>
+          <span className="leg-mode">{leg.mode}</span>
+          <span className="leg-label">{DEMO_DATA.connectionById(leg.connId)?.label ?? leg.connId}</span>
+          <span className="leg-times">
+            {formatIst(leg.depart)} → {formatIst(leg.arrive)}
+          </span>
+          <span className="leg-fare">{formatINR(leg.costINR)}</span>
+        </li>
+      ))}
+    </ol>
+  )
+}
+
 /**
  * The unlock probe's transient preview: the field is recomputing from the
  * relaxed snapshot, so the banner names the relaxation and offers the way
- * back. Saved scenarios and the constraint sliders stay untouched.
+ * back. Saved scenarios and the constraint sliders stay untouched. Rendered
+ * over the field so the lens is visible whatever is selected.
  */
-function PreviewBanner({ preview, onReset }: { preview: ProbePreview; onReset: () => void }) {
+export function PreviewBanner({ preview, onReset }: { preview: ProbePreview; onReset: () => void }) {
   return (
     <div className="probe-preview-banner" data-testid="probe-preview-banner" role="status">
-      <div>
+      <div className="preview-copy">
         <strong>Previewing a relaxation</strong>
         <p>{preview.summary}</p>
       </div>
@@ -50,7 +64,7 @@ function PreviewBanner({ preview, onReset }: { preview: ProbePreview; onReset: (
 }
 
 /**
- * The "what would it take?" panel for one unreachable destination. The probe
+ * The "what would it take?" probe for one unreachable destination. The probe
  * runs on demand — only when the affordance is clicked — never on recompute.
  * Remounting on `probeFingerprint` keeps a stale answer impossible.
  */
@@ -120,8 +134,7 @@ function ProbeSection({
       {probe.minExtraBudget !== null && (
         <div className="probe-row" data-testid="probe-delta-budget">
           <span>
-            {formatINR(probe.minExtraBudget)} more on the budget{' '}
-            <span className="probe-fare-note">(estimated fares)</span>
+            {formatINR(probe.minExtraBudget)} more on the budget <span className="probe-fare-note">(estimated fares)</span>
           </span>
           <button type="button" className="probe-btn" data-testid="probe-apply-budget" onClick={() => applyBudget(probe)}>
             Show it
@@ -132,9 +145,7 @@ function ProbeSection({
       {probe.minExtraTime !== null && (
         <div className="probe-row" data-testid="probe-delta-time">
           <span>
-            {probe.timeRelaxation === 'departure'
-              ? `${probe.minExtraTime} min earlier start`
-              : `${probe.minExtraTime} min more on the deadline`}
+            {probe.timeRelaxation === 'departure' ? `${probe.minExtraTime} min earlier start` : `${probe.minExtraTime} min more on the deadline`}
           </span>
           <button type="button" className="probe-btn" data-testid="probe-apply-time" onClick={() => applyTime(probe)}>
             Show it
@@ -159,18 +170,7 @@ function ProbeSection({
               {itinerary.transfers === 0 ? 'direct' : `${itinerary.transfers} transfer${itinerary.transfers === 1 ? '' : 's'}`}
             </span>
           </div>
-          <ol className="leg-list">
-            {itinerary.legs.map((leg) => (
-              <li key={leg.connId} className={`leg mode-${leg.mode}`}>
-                <span className="leg-mode">{leg.mode}</span>
-                <span className="leg-label">{DEMO_DATA.connectionById(leg.connId)?.label ?? leg.connId}</span>
-                <span className="leg-times">
-                  {formatIst(leg.depart)} → {formatIst(leg.arrive)}
-                </span>
-                <span className="leg-fare">{formatINR(leg.costINR)}</span>
-              </li>
-            ))}
-          </ol>
+          <LegList journey={itinerary} />
         </div>
       )}
 
@@ -179,42 +179,18 @@ function ProbeSection({
   )
 }
 
-/**
- * The selected destination's engine snapshot: every nondominated journey
- * with its leg breakdown, the round-trip badge, and the engine's reason.
- * Revalidated on every scrub — expired journeys simply stop being listed.
- * Unreachable destinations gain the unlock probe's "what would it take?".
- */
-export function DetailsPanel({
-  result,
-  constraints,
-  probeFingerprint,
-  preview,
-  onApplyPreview,
-  onResetPreview,
-}: DetailsPanelProps) {
-  if (!result) {
-    return (
-      <section className="panel details-panel" aria-label="Destination details">
-        <h2 className="panel-kicker">Destination</h2>
-        <p className="details-empty">Select a destination on the field or in the list to see its journeys.</p>
-      </section>
-    )
-  }
+interface DestinationDetailsProps {
+  result: DestinationResult
+  /** The folded constraints the probe runs against (a lens over the live sim). */
+  constraints: Constraints
+  /** Constraint fingerprint — a changed snapshot remounts the probe section. */
+  probeFingerprint: string
+  onApplyPreview: (preview: ProbePreview) => void
+}
 
+export function DestinationDetails({ result, constraints, probeFingerprint, onApplyPreview }: DestinationDetailsProps) {
   return (
-    <section className="panel details-panel" aria-label={`Details for ${result.location.name}`}>
-      {preview && <PreviewBanner preview={preview} onReset={onResetPreview} />}
-      <div className="details-head">
-        <h2 className="panel-kicker">Destination</h2>
-        <span className={`state-chip ${result.reachable ? 'state-ok' : 'state-ghost'}`}>
-          {result.reachable ? 'Possible' : 'Unreachable'}
-        </span>
-      </div>
-      <h3 className="details-name">{result.location.name}</h3>
-      <p className="details-tags">
-        {result.location.region} · {result.location.tags.join(' · ')}
-      </p>
+    <div className="dest-details" aria-label={`Details for ${result.location.name}`}>
       <p className="details-reason" data-testid="details-reason">
         {result.reason}
       </p>
@@ -233,25 +209,14 @@ export function DetailsPanel({
                     {j.transfers === 0 ? 'direct' : `${j.transfers} transfer${j.transfers === 1 ? '' : 's'}`}
                   </span>
                 </div>
-                <ol className="leg-list">
-                  {j.legs.map((leg) => (
-                    <li key={leg.connId} className={`leg mode-${leg.mode}`}>
-                      <span className="leg-mode">{leg.mode}</span>
-                      <span className="leg-label">{DEMO_DATA.connectionById(leg.connId)?.label ?? leg.connId}</span>
-                      <span className="leg-times">
-                        {formatIst(leg.depart)} → {formatIst(leg.arrive)}
-                      </span>
-                      <span className="leg-fare">{formatINR(leg.costINR)}</span>
-                    </li>
-                  ))}
-                </ol>
+                <LegList journey={j} />
               </li>
             ))}
           </ul>
           {result.roundTrip ? (
             <p className="roundtrip-badge" data-testid="roundtrip-badge">
-              Day trip possible — return arrives {formatIst(result.roundTrip.arriveAt)} ·{' '}
-              {formatINR(result.roundTrip.costINR)} return fare (estimated)
+              Day trip possible — return arrives {formatIst(result.roundTrip.arriveAt)} · {formatINR(result.roundTrip.costINR)} return fare
+              (estimated)
             </p>
           ) : (
             <p className="roundtrip-none">No valid return inside the deadline and budget — one-way reachability only.</p>
@@ -260,14 +225,9 @@ export function DetailsPanel({
       ) : (
         <>
           <p className="details-ghost-note">The field keeps this destination as a grey ghost at the rim while no valid itinerary survives.</p>
-          <ProbeSection
-            key={probeFingerprint}
-            result={result}
-            constraints={constraints}
-            onApplyPreview={onApplyPreview}
-          />
+          <ProbeSection key={probeFingerprint} result={result} constraints={constraints} onApplyPreview={onApplyPreview} />
         </>
       )}
-    </section>
+    </div>
   )
 }
