@@ -40,6 +40,21 @@ export interface SimState {
   minTransferMin: number
   selectedId: string | null
   scenarios: SavedScenario[]
+  /**
+   * The unlock probe's transient preview (upgrade spec): constraint overrides
+   * folded into the recompute so the field blooms without mutating any saved
+   * state. Scenarios save the baseline fields, never this lens.
+   */
+  probePreview: ProbePreview | null
+}
+
+/** Constraint overrides applied only to the recompute — the preview lens. */
+export interface ProbePreview {
+  budgetINR?: number
+  availableHours?: number
+  nowMs?: number
+  /** One-line banner text describing what is being previewed. */
+  summary: string
 }
 
 export type SimAction =
@@ -52,6 +67,8 @@ export type SimAction =
   | { type: 'setBudget'; inr: number }
   | { type: 'setAvailableHours'; hours: number }
   | { type: 'select'; id: string | null }
+  | { type: 'applyProbePreview'; preview: ProbePreview }
+  | { type: 'clearProbePreview' }
   | { type: 'saveScenario'; name: string }
   | { type: 'loadScenario'; name: string }
   | { type: 'deleteScenario'; name: string }
@@ -66,7 +83,13 @@ export function initSimState(): SimState {
     minTransferMin: DEFAULT_MIN_TRANSFER_MIN,
     selectedId: null,
     scenarios: loadScenarios(),
+    probePreview: null,
   }
+}
+
+/** Manual interactions exit the probe preview cleanly back to the live sim. */
+function exitPreview(state: SimState): SimState {
+  return state.probePreview === null ? state : { ...state, probePreview: null }
 }
 
 export function simReducer(state: SimState, action: SimAction): SimState {
@@ -75,36 +98,46 @@ export function simReducer(state: SimState, action: SimAction): SimState {
       if (!state.clock.playing) return state
       const nowMs = clampToSimWindow(state.clock.nowMs + action.dtMs * state.clock.speedMultiplier)
       const endReached = nowMs >= SIM_WINDOW_END_MS
-      return {
+      return exitPreview({
         ...state,
         clock: { ...state.clock, nowMs, playing: endReached ? false : state.clock.playing },
-      }
+      })
     }
     case 'setNow':
-      return { ...state, clock: { ...state.clock, nowMs: clampToSimWindow(snapToStep(action.ms)) } }
+      return exitPreview({
+        ...state,
+        clock: { ...state.clock, nowMs: clampToSimWindow(snapToStep(action.ms)) },
+      })
     case 'step':
-      return { ...state, clock: { ...state.clock, nowMs: stepClock(state.clock.nowMs, action.minutes) } }
+      return exitPreview({
+        ...state,
+        clock: { ...state.clock, nowMs: stepClock(state.clock.nowMs, action.minutes) },
+      })
     case 'togglePlay':
-      return { ...state, clock: { ...state.clock, playing: !state.clock.playing } }
+      return exitPreview({ ...state, clock: { ...state.clock, playing: !state.clock.playing } })
     case 'setSpeed':
-      return { ...state, clock: { ...state.clock, speedMultiplier: action.multiplier } }
+      return exitPreview({ ...state, clock: { ...state.clock, speedMultiplier: action.multiplier } })
     case 'setOrigin': {
       // Origins come from the bundled dataset only — an unknown id is a
       // caller bug, not a state change.
       if (!DEMO_DATA.locationById.has(action.id)) return state
-      return {
+      return exitPreview({
         ...state,
         originId: action.id,
         // A selection equal to the new origin is meaningless — drop it.
         selectedId: state.selectedId === action.id ? null : state.selectedId,
-      }
+      })
     }
     case 'setBudget':
-      return { ...state, budgetINR: clampBudgetINR(action.inr) }
+      return exitPreview({ ...state, budgetINR: clampBudgetINR(action.inr) })
     case 'setAvailableHours':
-      return { ...state, availableHours: clampAvailableHours(action.hours) }
+      return exitPreview({ ...state, availableHours: clampAvailableHours(action.hours) })
     case 'select':
-      return { ...state, selectedId: action.id }
+      return exitPreview({ ...state, selectedId: action.id })
+    case 'applyProbePreview':
+      return { ...state, probePreview: action.preview }
+    case 'clearProbePreview':
+      return state.probePreview === null ? state : { ...state, probePreview: null }
     case 'saveScenario': {
       const scenario = scenarioFromState(action.name, {
         clockNowMs: state.clock.nowMs,
@@ -127,7 +160,7 @@ export function simReducer(state: SimState, action: SimAction): SimState {
       // state for engine inputs.
       const parsed = parseScenario(scenario)
       if (!parsed || !DEMO_DATA.locationById.has(parsed.originId)) return state
-      return {
+      return exitPreview({
         ...state,
         // Constraints, clock position and selection restore together (spec);
         // playback pauses so the restored state is actually readable.
@@ -140,7 +173,7 @@ export function simReducer(state: SimState, action: SimAction): SimState {
         budgetINR: parsed.budgetINR,
         availableHours: parsed.availableHours,
         selectedId: parsed.selectedId,
-      }
+      })
     }
     case 'deleteScenario': {
       const scenarios = state.scenarios.filter((s) => s.name !== action.name)
@@ -162,6 +195,7 @@ export interface Simulation {
   summary: ReachabilitySummary
   selectedId: string | null
   scenarios: SavedScenario[]
+  probePreview: ProbePreview | null
   dispatch: Dispatch<SimAction>
 }
 
@@ -193,12 +227,21 @@ export function useSimulation(): Simulation {
   const constraints = useMemo<Constraints>(
     () => ({
       originId: state.originId,
-      now: state.clock.nowMs,
-      availableHours: state.availableHours,
-      budgetINR: state.budgetINR,
+      // The probe preview's overrides fold in here — the whole field
+      // recomputes from the relaxed snapshot while the lens is active.
+      now: state.probePreview?.nowMs ?? state.clock.nowMs,
+      availableHours: state.probePreview?.availableHours ?? state.availableHours,
+      budgetINR: state.probePreview?.budgetINR ?? state.budgetINR,
       minTransferMin: state.minTransferMin,
     }),
-    [state.originId, state.clock.nowMs, state.availableHours, state.budgetINR, state.minTransferMin],
+    [
+      state.originId,
+      state.clock.nowMs,
+      state.availableHours,
+      state.budgetINR,
+      state.minTransferMin,
+      state.probePreview,
+    ],
   )
 
   const results = useMemo(() => computeReachability(DEMO_DATA, constraints), [constraints])
@@ -211,6 +254,7 @@ export function useSimulation(): Simulation {
     summary,
     selectedId: state.selectedId,
     scenarios: state.scenarios,
+    probePreview: state.probePreview,
     dispatch,
   }
 }

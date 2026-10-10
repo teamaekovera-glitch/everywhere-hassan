@@ -1,11 +1,23 @@
+import { useState } from 'react'
 import type { DestinationResult, Journey } from '../engine/types'
+import { describeUnlock, probeUnlock } from '../engine'
+import type { UnlockProbe } from '../engine'
 import { DEMO_DATA } from '../data'
+import type { Constraints } from '../engine/types'
 import { formatIst } from '../sim/clock'
 import { formatINR } from '../engine/format'
 import { formatDuration } from '../viz/format'
+import type { ProbePreview } from '../state/store'
 
 interface DetailsPanelProps {
   result: DestinationResult | null
+  /** The folded constraints the probe runs against (a lens over the live sim). */
+  constraints: Constraints
+  /** Constraint fingerprint — a changed snapshot remounts the probe section. */
+  probeFingerprint: string
+  preview: ProbePreview | null
+  onApplyPreview: (preview: ProbePreview) => void
+  onResetPreview: () => void
 }
 
 function journeyDurationMin(j: Journey): number {
@@ -13,11 +25,174 @@ function journeyDurationMin(j: Journey): number {
 }
 
 /**
+ * The unlock probe's transient preview: the field is recomputing from the
+ * relaxed snapshot, so the banner names the relaxation and offers the way
+ * back. Saved scenarios and the constraint sliders stay untouched.
+ */
+function PreviewBanner({ preview, onReset }: { preview: ProbePreview; onReset: () => void }) {
+  return (
+    <div className="probe-preview-banner" data-testid="probe-preview-banner" role="status">
+      <div>
+        <strong>Previewing a relaxation</strong>
+        <p>{preview.summary}</p>
+      </div>
+      <button
+        type="button"
+        className="probe-btn probe-reset"
+        data-testid="probe-reset"
+        onClick={onReset}
+        aria-label="Reset the probe preview and restore the baseline"
+      >
+        Reset
+      </button>
+    </div>
+  )
+}
+
+/**
+ * The "what would it take?" panel for one unreachable destination. The probe
+ * runs on demand — only when the affordance is clicked — never on recompute.
+ * Remounting on `probeFingerprint` keeps a stale answer impossible.
+ */
+function ProbeSection({
+  result,
+  constraints,
+  onApplyPreview,
+}: {
+  result: DestinationResult
+  constraints: Constraints
+  onApplyPreview: (preview: ProbePreview) => void
+}) {
+  const [probe, setProbe] = useState<UnlockProbe | null>(null)
+
+  function runProbe() {
+    setProbe(probeUnlock(DEMO_DATA, constraints, result.location.id))
+  }
+
+  function applyBudget(p: UnlockProbe) {
+    if (p.minExtraBudget === null) return
+    const next = constraints.budgetINR + p.minExtraBudget
+    onApplyPreview({
+      budgetINR: next,
+      summary: `Budget raised ${formatINR(constraints.budgetINR)} → ${formatINR(next)} (transient preview — not saved)`,
+    })
+  }
+
+  function applyTime(p: UnlockProbe) {
+    if (p.minExtraTime === null) return
+    if (p.timeRelaxation === 'departure') {
+      const rewoundTo = constraints.now - p.minExtraTime * 60_000
+      onApplyPreview({
+        nowMs: rewoundTo,
+        // Stretch the window so the absolute deadline stays fixed — the same
+        // relaxation the probe searched ("leave earlier, same flexibility").
+        availableHours: constraints.availableHours + p.minExtraTime / 60,
+        summary: `Clock rewound ${p.minExtraTime} min → ${formatIst(rewoundTo)} (transient preview — not saved)`,
+      })
+    } else {
+      onApplyPreview({
+        availableHours: constraints.availableHours + p.minExtraTime / 60,
+        summary: `Deadline extended ${p.minExtraTime} min (transient preview — not saved)`,
+      })
+    }
+  }
+
+  if (!probe) {
+    return (
+      <div className="probe-section" data-testid="probe-section">
+        <button type="button" className="probe-btn" data-testid="probe-open" onClick={runProbe}>
+          What would it take?
+        </button>
+        <p className="probe-note">Probe runs on demand — read-only, nothing saved.</p>
+      </div>
+    )
+  }
+
+  const headline = describeUnlock(probe)
+  const itinerary = probe.cheapestUnlockedItinerary
+
+  return (
+    <div className="probe-section" data-testid="probe-section">
+      <p className="probe-headline" data-testid="probe-headline">
+        {headline ?? 'Nothing brings it back from here — no budget inside the app’s range and no time shift within the reference day unlocks this destination.'}
+      </p>
+
+      {probe.minExtraBudget !== null && (
+        <div className="probe-row" data-testid="probe-delta-budget">
+          <span>
+            {formatINR(probe.minExtraBudget)} more on the budget{' '}
+            <span className="probe-fare-note">(estimated fares)</span>
+          </span>
+          <button type="button" className="probe-btn" data-testid="probe-apply-budget" onClick={() => applyBudget(probe)}>
+            Show it
+          </button>
+        </div>
+      )}
+
+      {probe.minExtraTime !== null && (
+        <div className="probe-row" data-testid="probe-delta-time">
+          <span>
+            {probe.timeRelaxation === 'departure'
+              ? `${probe.minExtraTime} min earlier start`
+              : `${probe.minExtraTime} min more on the deadline`}
+          </span>
+          <button type="button" className="probe-btn" data-testid="probe-apply-time" onClick={() => applyTime(probe)}>
+            Show it
+          </button>
+        </div>
+      )}
+
+      {probe.blockingConnection && (
+        <p className="probe-blame" data-testid="probe-blocking">
+          Fragile link — {probe.blockingConnection.label}. Lose it and even the relaxed state strands this destination.
+        </p>
+      )}
+
+      {itinerary && (
+        <div className="journey probe-itinerary" data-testid="probe-itinerary">
+          <div className="journey-summary">
+            <span className="journey-window">
+              {formatIst(itinerary.departAt)} → {formatIst(itinerary.arriveAt)}
+            </span>
+            <span className="journey-meta">
+              {formatDuration(journeyDurationMin(itinerary))} · {formatINR(itinerary.costINR)} (estimated) ·{' '}
+              {itinerary.transfers === 0 ? 'direct' : `${itinerary.transfers} transfer${itinerary.transfers === 1 ? '' : 's'}`}
+            </span>
+          </div>
+          <ol className="leg-list">
+            {itinerary.legs.map((leg) => (
+              <li key={leg.connId} className={`leg mode-${leg.mode}`}>
+                <span className="leg-mode">{leg.mode}</span>
+                <span className="leg-label">{DEMO_DATA.connectionById(leg.connId)?.label ?? leg.connId}</span>
+                <span className="leg-times">
+                  {formatIst(leg.depart)} → {formatIst(leg.arrive)}
+                </span>
+                <span className="leg-fare">{formatINR(leg.costINR)}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      <p className="probe-note">Preview only — the field relaxes until you reset or touch any control.</p>
+    </div>
+  )
+}
+
+/**
  * The selected destination's engine snapshot: every nondominated journey
  * with its leg breakdown, the round-trip badge, and the engine's reason.
  * Revalidated on every scrub — expired journeys simply stop being listed.
+ * Unreachable destinations gain the unlock probe's "what would it take?".
  */
-export function DetailsPanel({ result }: DetailsPanelProps) {
+export function DetailsPanel({
+  result,
+  constraints,
+  probeFingerprint,
+  preview,
+  onApplyPreview,
+  onResetPreview,
+}: DetailsPanelProps) {
   if (!result) {
     return (
       <section className="panel details-panel" aria-label="Destination details">
@@ -29,6 +204,7 @@ export function DetailsPanel({ result }: DetailsPanelProps) {
 
   return (
     <section className="panel details-panel" aria-label={`Details for ${result.location.name}`}>
+      {preview && <PreviewBanner preview={preview} onReset={onResetPreview} />}
       <div className="details-head">
         <h2 className="panel-kicker">Destination</h2>
         <span className={`state-chip ${result.reachable ? 'state-ok' : 'state-ghost'}`}>
@@ -82,7 +258,15 @@ export function DetailsPanel({ result }: DetailsPanelProps) {
           )}
         </>
       ) : (
-        <p className="details-ghost-note">The field keeps this destination as a grey ghost at the rim while no valid itinerary survives.</p>
+        <>
+          <p className="details-ghost-note">The field keeps this destination as a grey ghost at the rim while no valid itinerary survives.</p>
+          <ProbeSection
+            key={probeFingerprint}
+            result={result}
+            constraints={constraints}
+            onApplyPreview={onApplyPreview}
+          />
+        </>
       )}
     </section>
   )
