@@ -9,8 +9,8 @@ interface ImageCreditsPanelProps {
 /**
  * Offline image attribution — every bundled Commons photo's creator, license,
  * and source page, rendered with no network access (CC BY-SA compliance is
- * not an afterthought). Standalone for now: the trip-detail surface wires it
- * in during a later PR.
+ * not an afterthought). Rendered at the foot of the trip-detail surface,
+ * filtered to the destination's own photos.
  */
 export function ImageCreditsPanel({ credits = PHOTO_CREDITS }: ImageCreditsPanelProps) {
   return (

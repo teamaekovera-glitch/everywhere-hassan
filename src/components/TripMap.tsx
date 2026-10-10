@@ -161,7 +161,7 @@ export default function TripMap({ plan, deadlineMs }: TripMapProps) {
       <div ref={containerRef} className="trip-map-canvas" key={mapKey} />
       <div className="trip-map-note">
         Route from EVERYWHERE's timetable · back by {formatIst(plan.arriveBackAt)} — before your{' '}
-        {formatIst(deadlineMs)} deadline · map data © OpenStreetMap contributors
+        {formatIst(deadlineMs)} deadline · map data © OpenStreetMap contributors — loads when online
       </div>
     </div>
   )

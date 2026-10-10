@@ -32,8 +32,9 @@ export function Home({ onPlanDay, onExplore }: HomeProps) {
           </button>
         </div>
         <p className="home-disclosure">
-          Timetables, fares, and activity ideas are synthetic estimates for demo purposes — the app
-          itself runs offline.
+          Timetables, fares, and activity ideas are synthetic estimates for demo purposes. Everything
+          runs offline except the route map's OpenStreetMap tiles — they load only when you're online.
+          No accounts, no tracking.
         </p>
       </header>
 
