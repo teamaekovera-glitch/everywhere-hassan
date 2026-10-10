@@ -6,6 +6,7 @@ import { OriginCard, BudgetCard, TimeCard, LiveModeCard } from './components/Con
 import { StatsCard } from './components/StatsCard'
 import { ScenariosPanel } from './components/ScenariosPanel'
 import { PreviewBanner } from './components/DestinationDetails'
+import { JourneysStrip } from './components/JourneysStrip'
 import { DestinationsRail } from './components/DestinationsRail'
 import { AlertCard } from './components/AlertCard'
 import { Timeline } from './components/Timeline'
@@ -104,6 +105,11 @@ export default function App() {
             results={results}
             originId={constraints.originId}
             originName={originName}
+            selectedId={selectedId}
+            onSelect={(id) => dispatch({ type: 'select', id })}
+          />
+          <JourneysStrip
+            results={results}
             selectedId={selectedId}
             onSelect={(id) => dispatch({ type: 'select', id })}
           />
