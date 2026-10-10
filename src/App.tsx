@@ -4,9 +4,11 @@ import { FieldCanvas } from './components/FieldCanvas'
 import { Header } from './components/Header'
 import { StatsPanel } from './components/StatsPanel'
 import { DetailsPanel } from './components/DetailsPanel'
+import { AlertsPanel } from './components/AlertsPanel'
 import { DestinationsRail } from './components/DestinationsRail'
 import { Timeline } from './components/Timeline'
 import { useSimulation } from './state/store'
+import { buildDepartureAlerts } from './state/alerts'
 import { SIM_WINDOW_END_MS, SIM_WINDOW_START_MS } from './sim/clock'
 
 /**
@@ -35,6 +37,8 @@ export default function App() {
 
   const selected = useMemo(() => results.find((r) => r.location.id === selectedId) ?? null, [results, selectedId])
 
+  const alerts = useMemo(() => buildDepartureAlerts(DEMO_DATA, constraints), [constraints])
+
   return (
     <div className="app-shell">
       <Header
@@ -44,6 +48,7 @@ export default function App() {
       />
       <div className="app-main">
         <aside className="rail rail-left">
+          <AlertsPanel alerts={alerts} />
           <StatsPanel
             summary={summary}
             originName={origin?.name ?? constraints.originId}
