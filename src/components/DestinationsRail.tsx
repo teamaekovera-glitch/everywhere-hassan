@@ -91,6 +91,7 @@ export function DestinationsRail({ results, selectedId, onSelect }: Destinations
           </li>
         ))}
       </ul>
+      <p className="rail-caption">Fares estimated · synthetic timetable</p>
     </section>
   )
 }
