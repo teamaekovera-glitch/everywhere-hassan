@@ -2,6 +2,8 @@ import { useEffect, useMemo, useReducer } from 'react'
 import type { Dispatch } from 'react'
 import { DEMO_DATA } from '../data'
 import {
+  clampAvailableHours,
+  clampBudgetINR,
   computeReachability,
   DEFAULT_AVAILABLE_HOURS,
   DEFAULT_BUDGET_INR,
@@ -43,6 +45,9 @@ export type SimAction =
   | { type: 'step'; minutes: number }
   | { type: 'togglePlay' }
   | { type: 'setSpeed'; multiplier: number }
+  | { type: 'setOrigin'; id: string }
+  | { type: 'setBudget'; inr: number }
+  | { type: 'setAvailableHours'; hours: number }
   | { type: 'select'; id: string | null }
   | { type: 'reset' }
 
@@ -76,6 +81,21 @@ export function simReducer(state: SimState, action: SimAction): SimState {
       return { ...state, clock: { ...state.clock, playing: !state.clock.playing } }
     case 'setSpeed':
       return { ...state, clock: { ...state.clock, speedMultiplier: action.multiplier } }
+    case 'setOrigin': {
+      // Origins come from the bundled dataset only — an unknown id is a
+      // caller bug, not a state change.
+      if (!DEMO_DATA.locationById.has(action.id)) return state
+      return {
+        ...state,
+        originId: action.id,
+        // A selection equal to the new origin is meaningless — drop it.
+        selectedId: state.selectedId === action.id ? null : state.selectedId,
+      }
+    }
+    case 'setBudget':
+      return { ...state, budgetINR: clampBudgetINR(action.inr) }
+    case 'setAvailableHours':
+      return { ...state, availableHours: clampAvailableHours(action.hours) }
     case 'select':
       return { ...state, selectedId: action.id }
     case 'reset':

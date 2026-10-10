@@ -1,7 +1,9 @@
 import { useMemo } from 'react'
 import { DEMO_DATA } from './data'
+import { deadlineOf } from './engine'
 import { FieldCanvas } from './components/FieldCanvas'
 import { Header } from './components/Header'
+import { ConstraintPanel } from './components/ConstraintPanel'
 import { StatsPanel } from './components/StatsPanel'
 import { DetailsPanel } from './components/DetailsPanel'
 import { AlertsPanel } from './components/AlertsPanel'
@@ -39,6 +41,15 @@ export default function App() {
 
   const alerts = useMemo(() => buildDepartureAlerts(DEMO_DATA, constraints), [constraints])
 
+  // Critical departures: distinct connections whose loss strands at least
+  // one currently reachable destination — read from the engine snapshot.
+  const criticalCount = useMemo(
+    () => new Set(results.flatMap((r) => (r.criticalConnId ? [r.criticalConnId] : []))).size,
+    [results],
+  )
+
+  const remainingMin = Math.max(0, Math.round((deadlineOf(constraints.now, constraints.availableHours) - constraints.now) / 60_000))
+
   return (
     <div className="app-shell">
       <Header
@@ -48,11 +59,22 @@ export default function App() {
       />
       <div className="app-main">
         <aside className="rail rail-left">
+          <ConstraintPanel
+            originId={constraints.originId}
+            budgetINR={constraints.budgetINR}
+            availableHours={constraints.availableHours}
+            onOrigin={(id) => dispatch({ type: 'setOrigin', id })}
+            onBudget={(inr) => dispatch({ type: 'setBudget', inr })}
+            onAvailableHours={(hours) => dispatch({ type: 'setAvailableHours', hours })}
+          />
           <AlertsPanel alerts={alerts} />
           <StatsPanel
             summary={summary}
             originName={origin?.name ?? constraints.originId}
             originRegion={origin?.region ?? '—'}
+            budgetINR={constraints.budgetINR}
+            remainingMin={remainingMin}
+            criticalCount={criticalCount}
           />
           <DetailsPanel result={selected} />
         </aside>

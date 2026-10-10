@@ -21,10 +21,16 @@ export type { ConnectionImpact, DestinationImpact } from './counterfactual'
 export { findRoundTrip, MIN_STAY_MINUTES } from './roundTrip'
 export { summarizeResults } from './summarize'
 export {
+  BUDGET_MAX_INR,
+  BUDGET_MIN_INR,
+  clampAvailableHours,
+  clampBudgetINR,
   DEFAULT_AVAILABLE_HOURS,
   DEFAULT_BUDGET_INR,
   DEFAULT_MIN_TRANSFER_MIN,
   DEFAULT_ORIGIN_ID,
+  HOURS_MAX,
+  HOURS_MIN,
   makeDefaultConstraints,
 } from './defaults'
 export { labelToJourney, journeysFromLabels, pickBest } from './journey'

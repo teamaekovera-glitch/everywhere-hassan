@@ -16,3 +16,17 @@ export function makeDefaultConstraints(originId: string = DEFAULT_ORIGIN_ID): Co
     minTransferMin: DEFAULT_MIN_TRANSFER_MIN,
   }
 }
+
+/** Constraint-panel slider bounds (spec): budget ₹200–₹10,000, time 2–48 h. */
+export const BUDGET_MIN_INR = 200
+export const BUDGET_MAX_INR = 10_000
+export const HOURS_MIN = 2
+export const HOURS_MAX = 48
+
+export function clampBudgetINR(inr: number): number {
+  return Math.min(BUDGET_MAX_INR, Math.max(BUDGET_MIN_INR, Math.round(inr)))
+}
+
+export function clampAvailableHours(hours: number): number {
+  return Math.min(HOURS_MAX, Math.max(HOURS_MIN, Math.round(hours)))
+}
