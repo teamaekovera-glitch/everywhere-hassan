@@ -3,7 +3,21 @@ import { ACTIVITIES, DEMO_DATA, MEALS, SPOTS } from '../src/data'
 import { DEFAULT_MIN_TRANSFER_MIN } from '../src/engine'
 import { planDayTrips } from '../src/engine/planner'
 import type { InterestId, PlannerInput, TripPlan } from '../src/engine/planner'
-import { buildItinerary, plansToFieldResults, poiPin, schematicLegs, scaleBarKmFor } from '../src/components/tripPlan'
+import {
+  buildItinerary,
+  estimateLabelWidthPx,
+  plansToFieldResults,
+  poiPin,
+  schematicEndpoints,
+  schematicLabelLayout,
+  schematicLabelRect,
+  schematicLegLabelText,
+  schematicLegs,
+  schematicProjection,
+  schematicRectsOverlap,
+  scaleBarKmFor,
+  SCHEMATIC_STOP_GAP_PX,
+} from '../src/components/tripPlan'
 import {
   SCHEMATIC_TILE_FAILURE_THRESHOLD,
   nextFailureCount,
@@ -225,3 +239,158 @@ function haversineKm(a: { lat: number; lon: number }, b: { lat: number; lon: num
     Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLon / 2) ** 2
   return 2 * R * Math.asin(Math.sqrt(h))
 }
+
+
+/** ---- Label anchoring (the carry-over from PR #13's QA) ---- */
+
+type Geo = { lat: number; lon: number }
+
+/** A synthetic single-segment round trip: out and back over the same line. */
+function straightLeg(id: string, phase: 'outbound' | 'return', from: Geo, to: Geo) {
+  return {
+    id,
+    label: 'Test Express',
+    mode: 'train' as const,
+    phase,
+    departMs: 0,
+    arriveMs: 3_600_000,
+    costINR: 50,
+    from,
+    to,
+    distanceKm: haversineKm(from, to),
+  }
+}
+
+describe('schematicEndpoints (destination anchoring)', () => {
+  const plans = plannerPlans()
+
+  it('anchors the destination at the destination coordinates for every plan shape', () => {
+    for (const plan of plans) {
+      const legs = schematicLegs(plan, DEMO_DATA)
+      const project = schematicProjection(legs, 640, 360)
+      const endpoints = schematicEndpoints(legs, project)
+      expect(endpoints).not.toBeNull()
+      const dest = DEMO_DATA.locationById.get(plan.destinationId)
+      const expected = project({ lat: dest?.lat ?? 0, lon: dest?.lon ?? 0 })
+      expect(endpoints?.destination.x).toBeCloseTo(expected.x, 6)
+      expect(endpoints?.destination.y).toBeCloseTo(expected.y, 6)
+    }
+  })
+
+  it('never anchors the destination at an intermediate stop on a multi-leg outbound', () => {
+    const multiLeg = plans
+      .map((plan) => ({ plan, legs: schematicLegs(plan, DEMO_DATA) }))
+      .filter(({ legs }) => legs.filter((l) => l.phase === 'outbound').length > 1)
+    expect(multiLeg.length).toBeGreaterThan(0) // the demo dataset must exercise this shape
+    for (const { plan, legs } of multiLeg) {
+      const project = schematicProjection(legs, 640, 360)
+      const endpoints = schematicEndpoints(legs, project)
+      const firstLegEnd = project(legs[0].to)
+      const dest = DEMO_DATA.locationById.get(plan.destinationId)
+      const destPoint = project({ lat: dest?.lat ?? 0, lon: dest?.lon ?? 0 })
+      // The bug this pins: `first.b` put the label on the intermediate stop.
+      expect(endpoints?.destination.x).not.toBeCloseTo(firstLegEnd.x, 6)
+      expect(endpoints?.destination.y).toBeCloseTo(destPoint.y, 6)
+    }
+  })
+
+  it('anchors the origin at the origin coordinates — never the return arrival', () => {
+    const plan = plans[0]
+    const legs = schematicLegs(plan, DEMO_DATA)
+    const project = schematicProjection(legs, 640, 360)
+    const endpoints = schematicEndpoints(legs, project)
+    const origin = DEMO_DATA.locationById.get(plan.outbound.legs[0].from)
+    const expected = project({ lat: origin?.lat ?? 0, lon: origin?.lon ?? 0 })
+    expect(endpoints?.origin.x).toBeCloseTo(expected.x, 6)
+    expect(endpoints?.origin.y).toBeCloseTo(expected.y, 6)
+    // The final return leg arrives back home; that point must not be
+    // presented as the destination.
+    expect(endpoints?.origin).not.toEqual(endpoints?.destination)
+  })
+
+  it('returns null for an empty leg list instead of a fake anchor', () => {
+    expect(schematicEndpoints([], (p) => ({ x: p.lat, y: p.lon }))).toBeNull()
+  })
+})
+
+describe('schematicLabelLayout (collision-free leg labels)', () => {
+  const plans = plannerPlans()
+
+  function labelRects(legs: ReturnType<typeof schematicLegs>, plan: TripPlan, width = 640, height = 360) {
+    const project = schematicProjection(legs, width, height)
+    const destinationName = DEMO_DATA.locationById.get(plan.destinationId)?.name ?? ''
+    const layout = schematicLabelLayout(legs, project, 'Kozhikode', destinationName)
+    expect(layout).not.toBeNull()
+    const all: { key: string; rect: ReturnType<typeof schematicLabelRect> }[] = [
+      {
+        key: 'stop:origin',
+        rect: schematicLabelRect(layout!.origin.x, layout!.origin.y, estimateLabelWidthPx('Kozhikode')),
+      },
+      {
+        key: 'stop:destination',
+        rect: schematicLabelRect(layout!.destination.x, layout!.destination.y, estimateLabelWidthPx(destinationName)),
+      },
+      ...layout!.legLabels.map((placement, i) => ({
+        key: legs[i].id,
+        rect: schematicLabelRect(placement.x, placement.y, estimateLabelWidthPx(schematicLegLabelText(legs[i]))),
+      })),
+    ]
+    return { layout: layout!, all }
+  }
+
+  it('no label rectangle intersects another, on every demo plan', () => {
+    for (const plan of plans) {
+      const legs = schematicLegs(plan, DEMO_DATA)
+      const { all } = labelRects(legs, plan)
+      for (let i = 0; i < all.length; i++) {
+        for (let j = i + 1; j < all.length; j++) {
+          expect(
+            schematicRectsOverlap(all[i].rect, all[j].rect),
+            `${all[i].key} overlaps ${all[j].key} on plan ${plan.destinationId}`,
+          ).toBe(false)
+        }
+      }
+    }
+  })
+
+  it('splits a retrace pair: outbound above the shared line, return below', () => {
+    const o = { lat: 11.25, lon: 75.78 }
+    const d = { lat: 10.5, lon: 76.2 }
+    const legs = [straightLeg('out-1', 'outbound', o, d), straightLeg('ret-1', 'return', d, o)]
+    const project = schematicProjection(legs, 640, 360)
+    const layout = schematicLabelLayout(legs, project, 'Origin', 'Destination')
+    expect(layout).not.toBeNull()
+    const midY = (project(o).y + project(d).y) / 2
+    expect(layout!.legLabels[0].y).toBeLessThan(midY)
+    expect(layout!.legLabels[1].y).toBeGreaterThan(midY)
+  })
+
+  it('keeps the destination label at the destination coordinates', () => {
+    const plan = plans[0]
+    const legs = schematicLegs(plan, DEMO_DATA)
+    const project = schematicProjection(legs, 640, 360)
+    const layout = schematicLabelLayout(legs, project, 'Kozhikode', 'Somewhere')
+    const dest = DEMO_DATA.locationById.get(plan.destinationId)
+    const expected = project({ lat: dest?.lat ?? 0, lon: dest?.lon ?? 0 })
+    expect(layout?.destination.x).toBeCloseTo(expected.x, 6)
+    expect(layout?.destination.y).toBeCloseTo(expected.y - SCHEMATIC_STOP_GAP_PX, 6)
+  })
+
+  it('is deterministic — same legs, same layout', () => {
+    const plan = plans[0]
+    const legs = schematicLegs(plan, DEMO_DATA)
+    const project = schematicProjection(legs, 640, 360)
+    expect(schematicLabelLayout(legs, project, 'Kozhikode', 'X')).toEqual(
+      schematicLabelLayout(legs, project, 'Kozhikode', 'X'),
+    )
+  })
+
+  it('produces one label per leg, index-aligned', () => {
+    for (const plan of plans) {
+      const legs = schematicLegs(plan, DEMO_DATA)
+      const project = schematicProjection(legs, 640, 360)
+      const layout = schematicLabelLayout(legs, project, 'Kozhikode', 'X')
+      expect(layout?.legLabels).toHaveLength(legs.length)
+    }
+  })
+})
