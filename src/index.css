@@ -167,6 +167,13 @@ select {
   scrollbar-width: thin;
 }
 
+.rail-caption {
+  font-size: 10px;
+  color: var(--faint);
+  margin: 0;
+  padding: 0 2px 2px;
+}
+
 .panel {
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -921,4 +928,68 @@ select {
 
 .scenario-actions .scenario-delete {
   color: var(--amber);
+}
+
+/* ---- responsive: desktop-first, degrades to stacked small screens ---- */
+
+/* Narrow desktops: slimmer side rails. */
+@media (max-width: 1280px) {
+  .app-main {
+    grid-template-columns: 256px minmax(0, 1fr) 224px;
+    padding: 12px 14px 6px;
+  }
+}
+
+/* Below ~1080px: stack — field first, then the panels full width. */
+@media (max-width: 1080px) {
+  .app-shell {
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .app-main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .field-area {
+    order: -1;
+    min-height: 420px;
+  }
+
+  .field-wrap {
+    min-height: 380px;
+  }
+
+  .rail {
+    overflow-y: visible;
+  }
+
+  .rail-left {
+    order: 0;
+  }
+
+  .rail-right {
+    order: 1;
+  }
+}
+
+/* Small screens: tighten the chrome, keep every control reachable. */
+@media (max-width: 640px) {
+  .app-header {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 14px;
+  }
+
+  .field-area {
+    min-height: 340px;
+  }
+
+  .field-wrap {
+    min-height: 300px;
+  }
+
+  .app-main {
+    padding: 10px 10px 6px;
+  }
 }
