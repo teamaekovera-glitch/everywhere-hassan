@@ -341,9 +341,18 @@ input[type='range']::-moz-range-thumb {
   gap: 12px;
 }
 
-.live-copy p {
-  margin: 2px 0 0;
+.live-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  min-width: 0;
+}
+
+.live-sub {
+  margin: 0;
   font-size: 12px;
+  line-height: 1.35;
   color: var(--faint);
 }
 
@@ -903,8 +912,7 @@ input[type='range']::-moz-range-thumb {
 /* ============ alert card ============ */
 
 .alert-card {
-  position: sticky;
-  bottom: 0;
+  position: static;
   margin-top: auto;
   display: flex;
   gap: 11px;
@@ -1306,11 +1314,12 @@ input[type='range']::-moz-range-thumb {
   position: absolute;
   transform: translateX(-50%);
   font-size: 10px;
+  white-space: nowrap;
   color: var(--faint);
 }
 
 .tl-caption {
-  margin: 0;
+  margin: 3px 0 0;
   font-size: 11px;
   color: var(--faint);
 }
@@ -1671,6 +1680,20 @@ input[type='range']::-moz-range-thumb {
 
   .timeline {
     order: 4;
+    /* stack controls / track / count — the desktop 3-column row cannot fit
+       375px once the nowrap status text claims its min-content width */
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .tl-count {
+    white-space: normal;
+    text-align: center;
+  }
+
+  /* headroom so the floating Now-label clears the controls row above */
+  .tl-track {
+    margin-top: 24px;
   }
 
   .journeys {

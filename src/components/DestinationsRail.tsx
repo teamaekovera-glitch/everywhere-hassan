@@ -189,7 +189,12 @@ function DestCard({
       className={`dest-card hue-${hue}${result.reachable ? '' : ' ghost'}${selected ? ' selected' : ''}`}
       data-testid={`dest-${result.location.id}`}
       onFocus={onFocusCard}
-      onClick={() => onSelect(result.location.id)}
+      onClick={(e) => {
+        // Probe buttons live inside the card; their clicks bubble here, and a
+        // re-select would clear the preview the click just applied.
+        if ((e.target as HTMLElement).closest('button, input, select, a')) return
+        onSelect(result.location.id)
+      }}
     >
       <span className="dest-thumb" aria-hidden="true">
         {imageSrc ? (

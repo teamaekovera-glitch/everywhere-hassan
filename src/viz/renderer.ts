@@ -492,26 +492,80 @@ export class FieldRenderer {
   }
 
   /**
-   * Leader-line labels on the largest reachable lobes (plus the selected
-   * and hovered node, always) — the mockup's quiet annotation layer.
+   * Leader-line labels on the largest reachable lobes (plus the origin,
+   * selected and hovered node, always) — the mockup's quiet annotation
+   * layer, never overlapping.
    */
   private drawLabels(): void {
     const ctx = this.ctx
+
+    // 1. Collect candidates in a fixed priority order: origin, selection,
+    //    hover, then labeled lobes fastest-first (same order as pickLabeled).
+    const byId = new Map(this.anim)
+    const ordered: AnimNode[] = []
+    const push = (id: string) => {
+      const a = byId.get(id)
+      if (a) ordered.push(a)
+    }
+    if (this.selectedId) push(this.selectedId)
+    if (this.hoverId) push(this.hoverId)
+    for (const id of this.labeled) if (id !== this.selectedId && id !== this.hoverId) push(id)
+
+    const candidates: LabelCandidate[] = [
+      {
+        id: '__origin__',
+        lx: this.cx + 12,
+        ly: this.cy,
+        align: 'left',
+        width: ctx.measureText(this.originName).width,
+        twoLine: false,
+        origin: true,
+      },
+      ...ordered
+        .filter((a) => a.target.reachable || a.target.id === this.selectedId || a.target.id === this.hoverId)
+        .map((a) => {
+          const t = a.target
+          const cos = Math.cos(t.angle)
+          const align = Math.abs(cos) < 0.35 ? ('center' as const) : cos > 0 ? ('left' as const) : ('right' as const)
+          ctx.font = '11px Inter, system-ui, -apple-system, sans-serif'
+          const nameW = ctx.measureText(t.name).width
+          let width = nameW
+          if (t.reachable) {
+            ctx.font = '10px Inter, system-ui, -apple-system, sans-serif'
+            const fare = t.cheapestINR !== null ? ` · from ₹${t.cheapestINR.toLocaleString('en-IN')}` : ''
+            width = Math.max(width, ctx.measureText(`${formatDuration(t.fastestMin)}${fare}`).width)
+          }
+          const lx = a.x + cos * 20 + (align === 'center' ? 0 : align === 'left' ? 6 : -6)
+          return {
+            id: t.id,
+            lx,
+            ly: a.y + Math.sin(t.angle) * 20,
+            align,
+            width,
+            twoLine: t.reachable,
+            origin: false,
+          }
+        }),
+    ]
+
+    // 2. Resolve collisions — nudged or dropped.
+    const placed = resolveLabels(candidates)
+    const slots = new Map(placed.map((p) => [p.id, p]))
+
+    // 3. Draw.
     ctx.font = '11px Inter, system-ui, -apple-system, sans-serif'
     ctx.textBaseline = 'middle'
-
     for (const a of this.anim.values()) {
       const t = a.target
       const forced = t.id === this.selectedId || t.id === this.hoverId
       if (!t.reachable && !forced) continue
       if (!forced && !this.labeled.has(t.id)) continue
+      const slot = slots.get(t.id)
+      if (!slot) continue
       const [r, g, b] = a.color
 
       const cos = Math.cos(t.angle)
       const sin = Math.sin(t.angle)
-      const align = Math.abs(cos) < 0.35 ? 'center' : cos > 0 ? 'left' : 'right'
-      const lx = a.x + cos * 20 + (align === 'center' ? 0 : align === 'left' ? 6 : -6)
-      const ly = a.y + sin * 20
 
       // Leader line: lobe edge → label anchor.
       ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${0.45 * a.alpha})`
@@ -522,23 +576,74 @@ export class FieldRenderer {
       ctx.stroke()
 
       const alpha = t.reachable ? a.alpha : a.alpha * 0.9
-      ctx.textAlign = align
+      ctx.textAlign = slot.align
       ctx.fillStyle = t.reachable ? LABEL_COLOR : `rgba(150, 165, 190, ${0.75 * alpha})`
-      ctx.fillText(t.name, lx, ly)
+      ctx.fillText(t.name, slot.lx, slot.ly)
       if (t.reachable) {
         ctx.font = '10px Inter, system-ui, -apple-system, sans-serif'
         ctx.fillStyle = `rgba(143, 163, 200, ${0.85 * alpha})`
         const fare = t.cheapestINR !== null ? ` · from ₹${t.cheapestINR.toLocaleString('en-IN')}` : ''
-        ctx.fillText(`${formatDuration(t.fastestMin)}${fare}`, lx, ly + 13)
+        ctx.fillText(`${formatDuration(t.fastestMin)}${fare}`, slot.lx, slot.ly + 13)
         ctx.font = '11px Inter, system-ui, -apple-system, sans-serif'
       }
     }
 
     // Origin label.
-    ctx.textAlign = 'left'
-    ctx.fillStyle = LABEL_COLOR
-    ctx.fillText(this.originName, this.cx + 12, this.cy)
+    const origin = slots.get('__origin__')
+    if (origin) {
+      ctx.textAlign = 'left'
+      ctx.fillStyle = LABEL_COLOR
+      ctx.fillText(this.originName, origin.lx, origin.ly)
+    }
   }
+}
+
+/** A label awaiting a slot: anchor point, alignment, and measured width. */
+interface LabelCandidate {
+  id: string
+  lx: number
+  ly: number
+  align: 'center' | 'left' | 'right'
+  width: number
+  twoLine: boolean
+  origin: boolean
+}
+
+/** A label that won a slot, possibly nudged vertically. */
+type PlacedLabel = LabelCandidate & { ly: number }
+
+/** Vertical nudges tried in order before a label is dropped. */
+const LABEL_NUDGES = [0, -15, 15, -30, 30, -45, 45, -60, 60] as const
+const LABEL_PAD = 3
+
+/**
+ * Greedy label placement — the mockup never stacks text on the field.
+ * Candidates keep their given priority order (origin, selection, hover,
+ * strongest lobes); each tries its natural spot, then fixed vertical
+ * nudges, and is dropped when every slot collides. Deterministic: same
+ * inputs, same placement.
+ */
+export function resolveLabels(candidates: readonly LabelCandidate[]): PlacedLabel[] {
+  const boxes: { x0: number; x1: number; y0: number; y1: number }[] = []
+  const placed: PlacedLabel[] = []
+  for (const c of candidates) {
+    const height = c.twoLine ? 26 : 13
+    const x0 = c.align === 'center' ? c.lx - c.width / 2 : c.align === 'left' ? c.lx : c.lx - c.width
+    const x1 = x0 + c.width
+    let chosenLy: number | null = null
+    for (const dy of LABEL_NUDGES) {
+      const y0 = c.ly + dy - 7
+      const y1 = y0 + height
+      const collides = boxes.some((b) => x0 < b.x1 + LABEL_PAD && x1 > b.x0 - LABEL_PAD && y0 < b.y1 + LABEL_PAD && y1 > b.y0 - LABEL_PAD)
+      if (!collides) {
+        chosenLy = c.ly + dy
+        boxes.push({ x0, x1, y0, y1 })
+        break
+      }
+    }
+    if (chosenLy !== null) placed.push({ ...c, ly: chosenLy })
+  }
+  return placed
 }
 
 /**
