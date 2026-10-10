@@ -53,6 +53,15 @@ export interface SimState {
   timelapse: TimelapseRuntime | null
 }
 
+/** Constraint overrides applied only to the recompute — the preview lens. */
+export interface ProbePreview {
+  budgetINR?: number
+  availableHours?: number
+  nowMs?: number
+  /** One-line banner text describing what is being previewed. */
+  summary: string
+}
+
 /** Where the story's playhead is. The sim state itself is the tour's state. */
 export interface StoryRuntime {
   chapterIndex: number

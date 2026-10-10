@@ -58,11 +58,13 @@ function walkTo(chapterIndex: number): SimState {
 }
 
 function engineSummary(state: SimState) {
+  // The probe preview is a lens over the constraints (spec): the engine
+  // truth the UI shows folds it in without mutating the baseline.
   const constraints = {
     originId: state.originId,
     now: state.clock.nowMs,
-    budgetINR: state.budgetINR,
-    availableHours: state.availableHours,
+    budgetINR: state.probePreview?.budgetINR ?? state.budgetINR,
+    availableHours: state.probePreview?.availableHours ?? state.availableHours,
     minTransferMin: state.minTransferMin,
   }
   return summarizeResults(computeReachability(DEMO_DATA, constraints))
@@ -169,12 +171,16 @@ describe('the unlock chapter applies the probe relaxation live', () => {
 
     const after = simReducer(before, { type: 'storyUnlock' })
     expect(after.story?.unlockApplied).toBe(true)
-    expect(after.budgetINR).toBe(2_120)
+    // The relaxation rides the probe panel's transient preview lens — the
+    // baseline wallet stays ₹2,000; only the previewed constraint unlocks.
+    expect(after.budgetINR).toBe(2_000)
+    expect(after.probePreview?.budgetINR).toBe(2_120)
+    expect(after.probePreview?.summary).toContain('₹120 more unlocks Ooty')
 
     const afterResults = computeReachability(DEMO_DATA, {
       originId: after.originId,
       now: after.clock.nowMs,
-      budgetINR: after.budgetINR,
+      budgetINR: after.probePreview?.budgetINR ?? after.budgetINR,
       availableHours: after.availableHours,
       minTransferMin: after.minTransferMin,
     })
@@ -311,7 +317,11 @@ describe('the tour never leaves the offline invariant behind', () => {
   it('chapters are plain store actions — no engine calls, no new machinery', () => {
     for (const chapter of STORY_CHAPTERS) {
       for (const action of [...chapter.enter, ...(chapter.unlock ?? [])]) {
-        expect(['pause', 'setNow', 'setOrigin', 'setBudget', 'setAvailableHours', 'select']).toContain(action.type)
+        // `applyProbePreview` is a plain lens action — no engine call, no
+        // saved-state mutation, so it stays inside the offline invariant.
+        expect(['pause', 'setNow', 'setOrigin', 'setBudget', 'setAvailableHours', 'select', 'applyProbePreview']).toContain(
+          action.type,
+        )
       }
     }
   })
