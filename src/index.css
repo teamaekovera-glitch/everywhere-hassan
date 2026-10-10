@@ -407,19 +407,18 @@ select {
   flex-direction: column;
 }
 
-.field-canvas-wrap {
+.field-wrap {
   position: relative;
   flex: 1;
   min-height: 0;
 }
 
-.field-canvas-wrap canvas {
+.field-wrap canvas {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   display: block;
-  cursor: crosshair;
 }
 
 .field-caption {

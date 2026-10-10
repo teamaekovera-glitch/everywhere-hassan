@@ -69,6 +69,12 @@ export function FieldCanvas({ results, originId, originName, selectedId, onSelec
     // reducedMotion is forwarded via setReducedMotion; onSelect via ref.
   }, [])
 
+  // Forward the tracked css size to the renderer — the bitmap and DPR
+  // transform must match the layout coordinate space before targets draw.
+  useEffect(() => {
+    rendererRef.current?.resize(size.width, size.height)
+  }, [size])
+
   // Layout is pure: same results and size, same field.
   const layout = useMemo(
     () => (size.width > 0 && size.height > 0 ? layoutField(results, size.width, size.height) : null),
