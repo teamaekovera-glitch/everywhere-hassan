@@ -34,6 +34,11 @@ function fracOf(ms: number): number {
   return (ms - SIM_WINDOW_START_MS) / SIM_WINDOW_SPAN_MS
 }
 
+/** "1 destination · 1 journey" — count lines read better singular at one. */
+function plural(n: number, word: string): string {
+  return `${word}${n === 1 ? '' : 's'}`
+}
+
 /**
  * The simulation's steering wheel (spec): a 06:00 → 06:00 (+1d) IST window
  * with a labelled cursor, draggable scrubber, play/pause, ±15-minute steps,
@@ -152,8 +157,8 @@ export function Timeline({
       </div>
 
       <div className="tl-count" role="status">
-        <strong>{summary.reachableCount}</strong> destinations · <strong>{summary.totalJourneys}</strong> journeys
-        still possible
+        <strong>{summary.reachableCount}</strong> {plural(summary.reachableCount, 'destination')} ·{' '}
+        <strong>{summary.totalJourneys}</strong> {plural(summary.totalJourneys, 'journey')} still possible
       </div>
     </section>
   )
