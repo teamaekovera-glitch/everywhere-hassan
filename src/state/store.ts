@@ -14,6 +14,8 @@ import {
 import type { Constraints, DestinationResult, ReachabilitySummary } from '../engine'
 import { SIM_WINDOW_END_MS, clampToSimWindow, makeSimClockState, stepClock } from '../sim/clock'
 import type { SimClockState } from '../sim/clock'
+import { loadScenarios, parseScenario, persistScenarios, scenarioFromState, upsertByName } from './scenarios'
+import type { SavedScenario } from './scenarios'
 
 /**
  * The one store (spec): constraints, the deterministic clock, and selection.
@@ -37,6 +39,7 @@ export interface SimState {
   availableHours: number
   minTransferMin: number
   selectedId: string | null
+  scenarios: SavedScenario[]
 }
 
 export type SimAction =
@@ -49,6 +52,9 @@ export type SimAction =
   | { type: 'setBudget'; inr: number }
   | { type: 'setAvailableHours'; hours: number }
   | { type: 'select'; id: string | null }
+  | { type: 'saveScenario'; name: string }
+  | { type: 'loadScenario'; name: string }
+  | { type: 'deleteScenario'; name: string }
   | { type: 'reset' }
 
 export function initSimState(): SimState {
@@ -59,6 +65,7 @@ export function initSimState(): SimState {
     availableHours: DEFAULT_AVAILABLE_HOURS,
     minTransferMin: DEFAULT_MIN_TRANSFER_MIN,
     selectedId: null,
+    scenarios: loadScenarios(),
   }
 }
 
@@ -98,7 +105,52 @@ export function simReducer(state: SimState, action: SimAction): SimState {
       return { ...state, availableHours: clampAvailableHours(action.hours) }
     case 'select':
       return { ...state, selectedId: action.id }
+    case 'saveScenario': {
+      const scenario = scenarioFromState(action.name, {
+        clockNowMs: state.clock.nowMs,
+        speedMultiplier: state.clock.speedMultiplier,
+        originId: state.originId,
+        budgetINR: state.budgetINR,
+        availableHours: state.availableHours,
+        selectedId: state.selectedId,
+      })
+      // Empty or oversized name → nothing to save; scenarioFromState said no.
+      if (!scenario) return state
+      const scenarios = upsertByName(state.scenarios, scenario)
+      persistScenarios(scenarios)
+      return { ...state, scenarios }
+    }
+    case 'loadScenario': {
+      const scenario = state.scenarios.find((s) => s.name === action.name)
+      if (!scenario) return state
+      // Re-validate on restore — the store never trusts non-engine-owned
+      // state for engine inputs.
+      const parsed = parseScenario(scenario)
+      if (!parsed || !DEMO_DATA.locationById.has(parsed.originId)) return state
+      return {
+        ...state,
+        // Constraints, clock position and selection restore together (spec);
+        // playback pauses so the restored state is actually readable.
+        clock: {
+          nowMs: parsed.clockNowMs,
+          playing: false,
+          speedMultiplier: parsed.speedMultiplier,
+        },
+        originId: parsed.originId,
+        budgetINR: parsed.budgetINR,
+        availableHours: parsed.availableHours,
+        selectedId: parsed.selectedId,
+      }
+    }
+    case 'deleteScenario': {
+      const scenarios = state.scenarios.filter((s) => s.name !== action.name)
+      if (scenarios.length === state.scenarios.length) return state
+      persistScenarios(scenarios)
+      return { ...state, scenarios }
+    }
     case 'reset':
+      // Scenarios live in localStorage and survive a demo reset — the fresh
+      // init re-reads them from storage so the list stays put.
       return initSimState()
   }
 }
@@ -109,6 +161,7 @@ export interface Simulation {
   results: DestinationResult[]
   summary: ReachabilitySummary
   selectedId: string | null
+  scenarios: SavedScenario[]
   dispatch: Dispatch<SimAction>
 }
 
@@ -157,6 +210,7 @@ export function useSimulation(): Simulation {
     results,
     summary,
     selectedId: state.selectedId,
+    scenarios: state.scenarios,
     dispatch,
   }
 }

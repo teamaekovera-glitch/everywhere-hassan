@@ -4,6 +4,7 @@ import { deadlineOf } from './engine'
 import { FieldCanvas } from './components/FieldCanvas'
 import { Header } from './components/Header'
 import { ConstraintPanel } from './components/ConstraintPanel'
+import { ScenariosPanel } from './components/ScenariosPanel'
 import { StatsPanel } from './components/StatsPanel'
 import { DetailsPanel } from './components/DetailsPanel'
 import { AlertsPanel } from './components/AlertsPanel'
@@ -19,7 +20,7 @@ import { SIM_WINDOW_END_MS, SIM_WINDOW_START_MS } from './sim/clock'
  * computes its own truth.
  */
 export default function App() {
-  const { clock, constraints, results, summary, selectedId, dispatch } = useSimulation()
+  const { clock, constraints, results, summary, selectedId, scenarios, dispatch } = useSimulation()
 
   const origin = DEMO_DATA.locationById.get(constraints.originId)
 
@@ -41,14 +42,11 @@ export default function App() {
 
   const alerts = useMemo(() => buildDepartureAlerts(DEMO_DATA, constraints), [constraints])
 
-  // Critical departures: distinct connections whose loss strands at least
-  // one currently reachable destination — read from the engine snapshot.
-  const criticalCount = useMemo(
-    () => new Set(results.flatMap((r) => (r.criticalConnId ? [r.criticalConnId] : []))).size,
-    [results],
+  // deadline − clock, in minutes — how much of the window still fits.
+  const remainingMin = Math.max(
+    0,
+    Math.round((deadlineOf(constraints.now, constraints.availableHours) - constraints.now) / 60_000),
   )
-
-  const remainingMin = Math.max(0, Math.round((deadlineOf(constraints.now, constraints.availableHours) - constraints.now) / 60_000))
 
   return (
     <div className="app-shell">
@@ -67,6 +65,12 @@ export default function App() {
             onBudget={(inr) => dispatch({ type: 'setBudget', inr })}
             onAvailableHours={(hours) => dispatch({ type: 'setAvailableHours', hours })}
           />
+          <ScenariosPanel
+            scenarios={scenarios}
+            onSave={(name) => dispatch({ type: 'saveScenario', name })}
+            onLoad={(name) => dispatch({ type: 'loadScenario', name })}
+            onDelete={(name) => dispatch({ type: 'deleteScenario', name })}
+          />
           <AlertsPanel alerts={alerts} />
           <StatsPanel
             summary={summary}
@@ -74,7 +78,7 @@ export default function App() {
             originRegion={origin?.region ?? '—'}
             budgetINR={constraints.budgetINR}
             remainingMin={remainingMin}
-            criticalCount={criticalCount}
+            criticalCount={criticalConnIds.size}
           />
           <DetailsPanel result={selected} />
         </aside>
